@@ -14,10 +14,10 @@ class RupeeLensApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'RupeeLens',
       theme: ThemeData(
-        colorSchemeSeed: Colors.green,
         useMaterial3: true,
+        colorSchemeSeed: Colors.green,
       ),
-      home: const HomeScreen(),
+      home: HomeScreen(),
     );
   }
 }

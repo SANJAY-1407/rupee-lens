@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/expense.dart';
 import '../services/expense_service.dart';
 
@@ -10,6 +11,7 @@ class AddExpenseScreen extends StatefulWidget {
 }
 
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
+
   final TextEditingController amountController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
 
@@ -17,119 +19,98 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   final List<String> categories = [
     "Food",
-    "Travel",
+    "Transport",
     "Shopping",
-    "Bills",
+    "Medical",
     "Entertainment",
-    "Other",
+    "Education",
+    "Bills",
+    "Others",
   ];
 
-  @override
-  void dispose() {
-    amountController.dispose();
-    descriptionController.dispose();
-    super.dispose();
-  }
+  Future<void> saveExpense() async {
 
-  void saveExpense() {
-    if (amountController.text.trim().isEmpty) {
+    if (amountController.text.isEmpty ||
+        descriptionController.text.isEmpty) {
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Please enter an amount"),
+          content: Text("Please fill all fields"),
         ),
       );
+
       return;
     }
 
-    final double? amount = double.tryParse(amountController.text);
-
-    if (amount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Enter a valid amount"),
-        ),
-      );
-      return;
-    }
-
-    Expense expense = Expense(
+    final expense = Expense(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      amount: amount,
+      amount: double.parse(amountController.text),
       category: selectedCategory,
-      description: descriptionController.text.trim(),
+      description: descriptionController.text,
       date: DateTime.now(),
     );
 
     ExpenseService.addExpense(expense);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Expense Saved Successfully!"),
-        backgroundColor: Colors.green,
-      ),
-    );
-
     amountController.clear();
     descriptionController.clear();
 
-    setState(() {
-      selectedCategory = "Food";
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Expense Added Successfully"),
+      ),
+    );
+
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+
     return Padding(
       padding: const EdgeInsets.all(16),
+
       child: SingleChildScrollView(
+
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+
           children: [
-
-            const SizedBox(height: 10),
-
-            const Text(
-              "Add Expense",
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 25),
 
             TextField(
               controller: amountController,
-                keyboardType: TextInputType.text,
-              decoration: InputDecoration(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
                 labelText: "Amount",
-                prefixText: "₹ ",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                border: OutlineInputBorder(),
               ),
             ),
 
             const SizedBox(height: 20),
 
             DropdownButtonFormField<String>(
+
               value: selectedCategory,
-              decoration: InputDecoration(
+
+              decoration: const InputDecoration(
                 labelText: "Category",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                border: OutlineInputBorder(),
               ),
+
               items: categories.map((category) {
+
                 return DropdownMenuItem(
                   value: category,
                   child: Text(category),
                 );
+
               }).toList(),
+
               onChanged: (value) {
+
                 setState(() {
                   selectedCategory = value!;
                 });
+
               },
             ),
 
@@ -137,12 +118,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
             TextField(
               controller: descriptionController,
-              maxLines: 3,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: "Description",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                border: OutlineInputBorder(),
               ),
             ),
 
@@ -150,25 +128,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
             SizedBox(
               width: double.infinity,
-              height: 55,
               child: ElevatedButton(
                 onPressed: saveExpense,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  "Save Expense",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: const Text("Add Expense"),
               ),
             ),
+
           ],
         ),
       ),

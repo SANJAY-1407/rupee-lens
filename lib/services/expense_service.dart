@@ -3,17 +3,17 @@ import '../models/expense.dart';
 class ExpenseService {
   static final List<Expense> expenses = [];
 
-  // Add Expense
   static void addExpense(Expense expense) {
     expenses.add(expense);
   }
-
-  // Get All Expenses
   static List<Expense> getExpenses() {
     return expenses;
   }
 
-  // Total Expense
+  static List<Expense> getRecentExpenses() {
+    return expenses.reversed.toList();
+  }
+
   static double getTotalExpense() {
     double total = 0;
 
@@ -24,29 +24,37 @@ class ExpenseService {
     return total;
   }
 
-  // Update Expense
-  static void updateExpense(Expense updatedExpense) {
-    final index = expenses.indexWhere(
-          (expense) => expense.id == updatedExpense.id,
-    );
+  static double getTodayExpense() {
+    double total = 0;
 
-    if (index != -1) {
-      expenses[index] = updatedExpense;
+    final today = DateTime.now();
+
+    for (var expense in expenses) {
+      if (expense.date.day == today.day &&
+          expense.date.month == today.month &&
+          expense.date.year == today.year) {
+        total += expense.amount;
+      }
     }
+
+    return total;
   }
 
-  // Delete Expense
-  static void deleteExpense(String id) {
-    expenses.removeWhere((expense) => expense.id == id);
-  }
+  static double getMonthlyExpense() {
+    double total = 0;
 
-  // Number of Expenses
+    final today = DateTime.now();
+
+    for (var expense in expenses) {
+      if (expense.date.month == today.month &&
+          expense.date.year == today.year) {
+        total += expense.amount;
+      }
+    }
+
+    return total;
+  }
   static int getExpenseCount() {
     return expenses.length;
-  }
-
-  // Clear All Expenses (Optional)
-  static void clearExpenses() {
-    expenses.clear();
   }
 }

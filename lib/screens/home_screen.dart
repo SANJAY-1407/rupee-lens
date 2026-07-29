@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+
+import '../services/expense_service.dart';
+import '../widgets/summary_card.dart';
+import '../widgets/recent_title.dart';
+
 import 'add_expense_screen.dart';
-import 'stats_screen.dart';
 import 'profile_screen.dart';
+import 'stats_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,36 +18,122 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
 
-  final List<Widget> pages = const [
-    Center(
-      child: Text(
-        "Welcome to RupeeLens 💰",
-        style: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    ),
-    AddExpenseScreen(),
-    StatsScreen(),
-    ProfileScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final homePage = SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Welcome 👋",
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          const Text(
+            "Track every rupee wisely.",
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+            ),
+          ),
+
+          const SizedBox(height: 25),
+
+          SummaryCard(
+            icon: Icons.account_balance_wallet,
+            title: "Total Expense",
+            value:
+            "₹${ExpenseService.getTotalExpense().toStringAsFixed(2)}",
+            iconColor: Colors.green,
+          ),
+
+          const SizedBox(height: 15),
+
+          SummaryCard(
+            icon: Icons.today,
+            title: "Today's Expense",
+            value:
+            "₹${ExpenseService.getTodayExpense().toStringAsFixed(2)}",
+            iconColor: Colors.orange,
+          ),
+
+          const SizedBox(height: 15),
+
+          SummaryCard(
+            icon: Icons.calendar_month,
+            title: "This Month",
+            value:
+            "₹${ExpenseService.getMonthlyExpense().toStringAsFixed(2)}",
+            iconColor: Colors.blue,
+          ),
+
+          const SizedBox(height: 15),
+
+          SummaryCard(
+            icon: Icons.receipt_long,
+            title: "Number of Expenses",
+            value: ExpenseService.getExpenseCount().toString(),
+            iconColor: Colors.purple,
+          ),
+
+          const SizedBox(height: 30),
+
+          const Text(
+            "Recent Expenses",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 15),
+
+          if (ExpenseService.getRecentExpenses().isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  "No expenses yet.",
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            )
+          else
+            ...ExpenseService.getRecentExpenses().map(
+                  (expense) => RecentTile(
+                icon: Icons.currency_rupee,
+                title: expense.category,
+                subtitle: expense.description,
+                amount: "₹${expense.amount.toStringAsFixed(2)}",
+              ),
+            ),
+        ],
+      ),
+    );
+
+    final pages = [
+      homePage,
+      const AddExpenseScreen(),
+      const StatsScreen(),
+      const ProfileScreen(),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("RupeeLens"),
         centerTitle: true,
       ),
-
       body: pages[currentIndex],
-
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.grey,
         onTap: (index) {
           setState(() {
             currentIndex = index;
@@ -54,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
             label: "Home",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle),
+            icon: Icon(Icons.add),
             label: "Add",
           ),
           BottomNavigationBarItem(
