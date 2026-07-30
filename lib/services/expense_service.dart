@@ -10,7 +10,6 @@ class ExpenseService {
   static List<Expense> getExpenses() {
     return expenses;
   }
-
   static List<Expense> getRecentExpenses() {
     return expenses.reversed.toList();
   }
@@ -103,6 +102,20 @@ class ExpenseService {
     if (expenses.isEmpty) return 0;
 
     return getTotalExpense() / expenses.length;
+  }
+  // Delete Expense
+  static void deleteExpense(String id) {
+    expenses.removeWhere((expense) => expense.id == id);
+  }
+  // Update Expense
+  static void updateExpense(Expense updatedExpense) {
+    final index = expenses.indexWhere(
+          (expense) => expense.id == updatedExpense.id,
+    );
+
+    if (index != -1) {
+      expenses[index] = updatedExpense;
+    }
   }
 
 

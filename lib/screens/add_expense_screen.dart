@@ -4,7 +4,12 @@ import '../models/expense.dart';
 import '../services/expense_service.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key});
+  final Expense? expense;
+
+  const AddExpenseScreen({
+    super.key,
+    this.expense,
+  });
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -27,39 +32,56 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     "Bills",
     "Others",
   ];
+  @override
+  void initState() {
+    super.initState();
 
+    if (widget.expense != null) {
+      amountController.text = widget.expense!.amount.toString();
+      descriptionController.text = widget.expense!.description;
+      selectedCategory = widget.expense!.category;
+    }
+  }
   Future<void> saveExpense() async {
-
     if (amountController.text.isEmpty ||
         descriptionController.text.isEmpty) {
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please fill all fields"),
         ),
       );
-
       return;
     }
 
     final expense = Expense(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.expense?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
       amount: double.parse(amountController.text),
       category: selectedCategory,
       description: descriptionController.text,
       date: DateTime.now(),
     );
 
-    ExpenseService.addExpense(expense);
+    if (widget.expense == null) {
+      ExpenseService.addExpense(expense);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Expense Added Successfully"),
+        ),
+      );
+    } else {
+      ExpenseService.updateExpense(expense);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Expense Updated Successfully"),
+        ),
+      );
+    }
 
     amountController.clear();
     descriptionController.clear();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Expense Added Successfully"),
-      ),
-    );
 
     setState(() {});
   }
@@ -130,10 +152,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: saveExpense,
-                child: const Text("Add Expense"),
+                child: Text(
+                  widget.expense == null
+                      ? "Add Expense"
+                      : "Update Expense",
+                ),
               ),
             ),
-
           ],
         ),
       ),

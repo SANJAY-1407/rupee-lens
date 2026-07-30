@@ -7,6 +7,7 @@ import '../widgets/recent_title.dart';
 import 'add_expense_screen.dart';
 import 'profile_screen.dart';
 import 'stats_screen.dart';
+import '../models/expense.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,7 +18,114 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
+  void showEditDialog(Expense expense) {
 
+    final amountController =
+    TextEditingController(text: expense.amount.toString());
+
+    final descriptionController =
+    TextEditingController(text: expense.description);
+
+    String selectedCategory = expense.category;
+
+    final categories = [
+      "Food",
+      "Transport",
+      "Shopping",
+      "Medical",
+      "Entertainment",
+      "Education",
+      "Bills",
+      "Others",
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Edit Expense"),
+
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+
+                    TextField(
+                      controller: amountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Amount",
+                      ),
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    DropdownButtonFormField<String>(
+                      value: selectedCategory,
+
+                      items: categories.map((category) {
+                        return DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        );
+                      }).toList(),
+
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedCategory = value!;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    TextField(
+                      controller: descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: "Description",
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              actions: [
+
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Cancel"),
+                ),
+
+                ElevatedButton(
+                  onPressed: () {
+
+                    final updatedExpense = Expense(
+                      id: expense.id,
+                      amount: double.parse(amountController.text),
+                      category: selectedCategory,
+                      description: descriptionController.text,
+                      date: expense.date,
+                    );
+
+                    ExpenseService.updateExpense(updatedExpense);
+
+                    setState(() {});
+
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Save"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final homePage = SingleChildScrollView(
@@ -107,11 +215,22 @@ class _HomeScreenState extends State<HomeScreen> {
           else
             ...ExpenseService.getRecentExpenses().map(
                   (expense) => RecentTile(
-                icon: Icons.currency_rupee,
-                title: expense.category,
-                subtitle: expense.description,
-                amount: "₹${expense.amount.toStringAsFixed(2)}",
-              ),
+                    icon: Icons.currency_rupee,
+                    iconColor: Colors.green,
+                    title: expense.category,
+                    subtitle: expense.description,
+                    amount: "₹${expense.amount.toStringAsFixed(2)}",
+
+                    onEdit: () {
+                      showEditDialog(expense);
+                    },
+
+                    onDelete: () {
+                      setState(() {
+                        ExpenseService.deleteExpense(expense.id);
+                      });
+                    },
+                  ),
             ),
         ],
       ),
