@@ -1,126 +1,149 @@
 import 'package:flutter/material.dart';
+
 import '../services/expense_service.dart';
+import '../widgets/summary_card.dart';
+import '../widgets/pie_chart_widget.dart';
 
 class StatsScreen extends StatelessWidget {
   const StatsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final expenses = ExpenseService.getExpenses();
-    final totalExpense = ExpenseService.getTotalExpense();
+    final categories = ExpenseService.getCategoryTotals();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Statistics"),
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: expenses.isEmpty
-            ? const Center(
-          child: Text(
-            "No Expenses Added Yet",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        )
-            : Column(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Card(
-              elevation: 5,
-              child: ListTile(
-                leading: const Icon(
-                  Icons.account_balance_wallet,
-                  color: Colors.green,
-                  size: 35,
-                ),
-                title: const Text(
-                  "Total Expense",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                subtitle: Text(
-                  "₹ ${totalExpense.toStringAsFixed(2)}",
-                  style: const TextStyle(
-                    fontSize: 22,
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+            SummaryCard(
+              icon: Icons.account_balance_wallet,
+              title: "Total Expense",
+              value:
+              "₹${ExpenseService.getTotalExpense().toStringAsFixed(2)}",
+              iconColor: Colors.green,
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 15),
 
-            Card(
-              elevation: 5,
-              child: ListTile(
-                leading: const Icon(
-                  Icons.receipt_long,
-                  color: Colors.blue,
-                  size: 35,
-                ),
-                title: const Text(
-                  "Number of Expenses",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                subtitle: Text(
-                  expenses.length.toString(),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+            SummaryCard(
+              icon: Icons.arrow_upward,
+              title: "Highest Expense",
+              value:
+              "₹${ExpenseService.getHighestExpense().toStringAsFixed(2)}",
+              iconColor: Colors.red,
+            ),
+
+            const SizedBox(height: 15),
+
+            SummaryCard(
+              icon: Icons.arrow_downward,
+              title: "Lowest Expense",
+              value:
+              "₹${ExpenseService.getLowestExpense().toStringAsFixed(2)}",
+              iconColor: Colors.blue,
+            ),
+
+            const SizedBox(height: 15),
+
+            SummaryCard(
+              icon: Icons.calculate,
+              title: "Average Expense",
+              value:
+              "₹${ExpenseService.getAverageExpense().toStringAsFixed(2)}",
+              iconColor: Colors.orange,
             ),
 
             const SizedBox(height: 30),
 
             const Text(
-              "Expense History",
+              "Category Wise",
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
 
-            Expanded(
-              child: ListView.builder(
-                itemCount: expenses.length,
-                itemBuilder: (context, index) {
-                  final expense = expenses[index];
+            if (categories.isEmpty)
+              const Column(
+                children: [
+                  SizedBox(height: 20),
+                  Icon(
+                    Icons.pie_chart_outline,
+                    size: 70,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(height: 15),
+                  Text(
+                    "No Expenses Added Yet",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Text(
+                    "Add some expenses to view statistics.",
+                    style: TextStyle(
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              )
+            else ...[
+              PieChartWidget(data: categories),
+              const SizedBox(height: 20),
 
-                  return Card(
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.green,
-                        child: Text(
-                          "₹",
-                          style: TextStyle(color: Colors.white),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: categories.entries.map((entry) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 15,
+                        height: 15,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      title: Text(expense.category),
-                      subtitle: Text(expense.description),
-                      trailing: Text(
-                        "₹${expense.amount.toStringAsFixed(2)}",
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      const SizedBox(width: 6),
+                      Text(entry.key),
+                    ],
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 20),
+
+              ...categories.entries.map(
+                    (entry) => Card(
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.category,
+                      color: Colors.green,
+                    ),
+                    title: Text(entry.key),
+                    trailing: Text(
+                      "₹${entry.value.toStringAsFixed(2)}",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

@@ -5,6 +5,7 @@ class ExpenseService {
 
   static void addExpense(Expense expense) {
     expenses.add(expense);
+
   }
   static List<Expense> getExpenses() {
     return expenses;
@@ -57,4 +58,52 @@ class ExpenseService {
   static int getExpenseCount() {
     return expenses.length;
   }
+  static Map<String, double> getCategoryTotals() {
+    Map<String, double> totals = {};
+
+    for (var expense in expenses) {
+      totals[expense.category] =
+          (totals[expense.category] ?? 0) + expense.amount;
+    }
+
+    return totals;
+  }
+  // Highest Expense
+  static double getHighestExpense() {
+    if (expenses.isEmpty) return 0;
+
+    double highest = expenses.first.amount;
+
+    for (var expense in expenses) {
+      if (expense.amount > highest) {
+        highest = expense.amount;
+      }
+    }
+
+    return highest;
+  }
+
+// Lowest Expense
+  static double getLowestExpense() {
+    if (expenses.isEmpty) return 0;
+
+    double lowest = expenses.first.amount;
+
+    for (var expense in expenses) {
+      if (expense.amount < lowest) {
+        lowest = expense.amount;
+      }
+    }
+
+    return lowest;
+  }
+
+// Average Expense
+  static double getAverageExpense() {
+    if (expenses.isEmpty) return 0;
+
+    return getTotalExpense() / expenses.length;
+  }
+
+
 }
