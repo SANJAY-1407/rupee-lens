@@ -18,6 +18,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
+  final TextEditingController searchController = TextEditingController();
+
+  String searchText = "";
   void showEditDialog(Expense expense) {
 
     final amountController =
@@ -103,12 +106,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   onPressed: () {
 
-                    final updatedExpense = Expense(
+                    final updatedExpense =Expense(
                       id: expense.id,
                       amount: double.parse(amountController.text),
                       category: selectedCategory,
                       description: descriptionController.text,
                       date: expense.date,
+                      paymentMethod: expense.paymentMethod,
+                      denomination: expense.denomination,
                     );
 
                     ExpenseService.updateExpense(updatedExpense);
@@ -128,6 +133,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   @override
   Widget build(BuildContext context) {
+    final filteredExpenses = ExpenseService.getRecentExpenses().where((expense) {
+      return expense.category
+          .toLowerCase()
+          .contains(searchText) ||
+          expense.description
+              .toLowerCase()
+              .contains(searchText);
+    }).toList();
     final homePage = SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -191,7 +204,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           const SizedBox(height: 30),
+          TextField(
+            controller: searchController,
+            decoration: const InputDecoration(
+              hintText: "Search Expense...",
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              setState(() {
+                searchText = value.toLowerCase();
+              });
+            },
+          ),
 
+          const SizedBox(height: 20),
           const Text(
             "Recent Expenses",
             style: TextStyle(
@@ -202,39 +229,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 15),
 
-          if (ExpenseService.getRecentExpenses().isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  "No expenses yet.",
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
-            )
-          else
-            ...ExpenseService.getRecentExpenses().map(
-                  (expense) => RecentTile(
-                    icon: Icons.currency_rupee,
-                    iconColor: Colors.green,
-                    title: expense.category,
-                    subtitle: expense.description,
-                    amount: "₹${expense.amount.toStringAsFixed(2)}",
+          filteredExpenses.isEmpty
+          ? const Center(
+        child: Text(
+          "No expenses yet.",
+          style: TextStyle(fontSize: 18),
+        ),
+      )
+          : Column(
+            children: filteredExpenses.map((expense) {
+          return RecentTile(
+            icon: Icons.currency_rupee,
+            iconColor: Colors.green,
+            title: expense.category,
+            subtitle: expense.paymentMethod == "Cash"
+                ? "${expense.description} • Cash • ${expense.denomination} notes"
+                : "${expense.description} • UPI",
+            amount: "₹${expense.amount.toStringAsFixed(2)}",
+            onEdit: () {
+              showEditDialog(expense);
+            },
+            onDelete: () {
+              setState(() {
+                ExpenseService.deleteExpense(expense.id);
+              });
+            },
+          );
+        }).toList(),
+      ),
 
-                    onEdit: () {
-                      showEditDialog(expense);
-                    },
-
-                    onDelete: () {
-                      setState(() {
-                        ExpenseService.deleteExpense(expense.id);
-                      });
-                    },
-                  ),
-            ),
         ],
       ),
     );
+
 
     final pages = [
       homePage,

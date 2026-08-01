@@ -30,27 +30,53 @@ class RecentTile extends StatelessWidget {
           backgroundColor: iconColor.withValues(alpha: 0.2),
           child: Icon(icon, color: iconColor),
         ),
-        title: Text(title),
+
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
         subtitle: Text(subtitle),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              amount,
-              style: const TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
+
+        trailing: SizedBox(
+          width: 150,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+
+              Flexible(
+                child: Text(
+                  amount,
+                  textAlign: TextAlign.end,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
-              onPressed: onEdit,
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: onDelete,
-            ),
-          ],
+
+              IconButton(
+                icon: const Icon(
+                  Icons.edit,
+                  color: Colors.blue,
+                  size: 20,
+                ),
+                onPressed: onEdit,
+              ),
+
+              IconButton(
+                icon: const Icon(
+                  Icons.delete,
+                  color: Colors.red,
+                  size: 20,
+                ),
+                onPressed: onDelete,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/expense.dart';
+import '../services/denomination_service.dart';
 import '../services/expense_service.dart';
 
 class AddExpenseScreen extends StatefulWidget {
@@ -21,6 +22,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final TextEditingController descriptionController = TextEditingController();
 
   String selectedCategory = "Food";
+  String selectedPaymentMethod = "Cash";
+
+  String selectedDenomination = "₹100";
 
   final List<String> categories = [
     "Food",
@@ -53,13 +57,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       return;
     }
 
+    // 👇 ADD THESE TWO LINES HERE
+    final amount = double.parse(amountController.text);
+    final description = descriptionController.text.trim();
+
     final expense = Expense(
-      id: widget.expense?.id ??
-          DateTime.now().millisecondsSinceEpoch.toString(),
-      amount: double.parse(amountController.text),
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      amount: amount,
       category: selectedCategory,
-      description: descriptionController.text,
+      description: description,
       date: DateTime.now(),
+      paymentMethod: selectedPaymentMethod,
+      denomination: selectedPaymentMethod == "Cash"
+          ? DenominationService.calculate(
+        int.parse(amountController.text),
+      ).join("\n")
+          : "UPI",
     );
 
     if (widget.expense == null) {
@@ -98,6 +111,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
           children: [
 
+            const Text(
+              "THIS IS MY NEW SCREEN",
+              style: TextStyle(
+                fontSize: 25,
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 20),
             TextField(
               controller: amountController,
               keyboardType: TextInputType.number,
@@ -135,7 +158,60 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
               },
             ),
+            const SizedBox(height: 15),
 
+            const Text(
+              "Payment Method",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            RadioListTile<String>(
+              title: const Text("Cash"),
+              value: "Cash",
+              groupValue: selectedPaymentMethod,
+              onChanged: (value) {
+                setState(() {
+                  selectedPaymentMethod = value!;
+                });
+              },
+            ),
+
+            RadioListTile<String>(
+              title: const Text("UPI"),
+              value: "UPI",
+              groupValue: selectedPaymentMethod,
+              onChanged: (value) {
+                setState(() {
+                  selectedPaymentMethod = value!;
+                });
+              },
+            ),
+            if (selectedPaymentMethod == "Cash") ...[
+              const SizedBox(height: 10),
+
+              DropdownButtonFormField<String>(
+                value: selectedDenomination,
+                decoration: const InputDecoration(
+                  labelText: "Denomination",
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: "₹10", child: Text("₹10")),
+                  DropdownMenuItem(value: "₹20", child: Text("₹20")),
+                  DropdownMenuItem(value: "₹50", child: Text("₹50")),
+                  DropdownMenuItem(value: "₹100", child: Text("₹100")),
+                  DropdownMenuItem(value: "₹200", child: Text("₹200")),
+                  DropdownMenuItem(value: "₹500", child: Text("₹500")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedDenomination = value!;
+                  });
+                },
+              ),
+            ],
             const SizedBox(height: 20),
 
             TextField(

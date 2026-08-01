@@ -1,35 +1,42 @@
+import 'package:hive/hive.dart';
 import '../models/expense.dart';
 
 class ExpenseService {
-  static final List<Expense> expenses = [];
+  static final Box<Expense> expenseBox =
+  Hive.box<Expense>('expenses');
 
+  // Add Expense
   static void addExpense(Expense expense) {
-    expenses.add(expense);
-
+    expenseBox.put(expense.id, expense);
   }
+
+  // Get All Expenses
   static List<Expense> getExpenses() {
-    return expenses;
-  }
-  static List<Expense> getRecentExpenses() {
-    return expenses.reversed.toList();
+    return expenseBox.values.toList();
   }
 
+  // Recent Expenses
+  static List<Expense> getRecentExpenses() {
+    return expenseBox.values.toList().reversed.toList();
+  }
+
+  // Total Expense
   static double getTotalExpense() {
     double total = 0;
 
-    for (var expense in expenses) {
+    for (var expense in expenseBox.values) {
       total += expense.amount;
     }
 
     return total;
   }
 
+  // Today's Expense
   static double getTodayExpense() {
     double total = 0;
-
     final today = DateTime.now();
 
-    for (var expense in expenses) {
+    for (var expense in expenseBox.values) {
       if (expense.date.day == today.day &&
           expense.date.month == today.month &&
           expense.date.year == today.year) {
@@ -40,12 +47,12 @@ class ExpenseService {
     return total;
   }
 
+  // Monthly Expense
   static double getMonthlyExpense() {
     double total = 0;
-
     final today = DateTime.now();
 
-    for (var expense in expenses) {
+    for (var expense in expenseBox.values) {
       if (expense.date.month == today.month &&
           expense.date.year == today.year) {
         total += expense.amount;
@@ -54,26 +61,31 @@ class ExpenseService {
 
     return total;
   }
+
+  // Expense Count
   static int getExpenseCount() {
-    return expenses.length;
+    return expenseBox.length;
   }
+
+  // Category Totals
   static Map<String, double> getCategoryTotals() {
     Map<String, double> totals = {};
 
-    for (var expense in expenses) {
+    for (var expense in expenseBox.values) {
       totals[expense.category] =
           (totals[expense.category] ?? 0) + expense.amount;
     }
 
     return totals;
   }
+
   // Highest Expense
   static double getHighestExpense() {
-    if (expenses.isEmpty) return 0;
+    if (expenseBox.isEmpty) return 0;
 
-    double highest = expenses.first.amount;
+    double highest = expenseBox.values.first.amount;
 
-    for (var expense in expenses) {
+    for (var expense in expenseBox.values) {
       if (expense.amount > highest) {
         highest = expense.amount;
       }
@@ -82,13 +94,13 @@ class ExpenseService {
     return highest;
   }
 
-// Lowest Expense
+  // Lowest Expense
   static double getLowestExpense() {
-    if (expenses.isEmpty) return 0;
+    if (expenseBox.isEmpty) return 0;
 
-    double lowest = expenses.first.amount;
+    double lowest = expenseBox.values.first.amount;
 
-    for (var expense in expenses) {
+    for (var expense in expenseBox.values) {
       if (expense.amount < lowest) {
         lowest = expense.amount;
       }
@@ -97,26 +109,60 @@ class ExpenseService {
     return lowest;
   }
 
-// Average Expense
+  // Average Expense
   static double getAverageExpense() {
-    if (expenses.isEmpty) return 0;
+    if (expenseBox.isEmpty) return 0;
 
-    return getTotalExpense() / expenses.length;
+    return getTotalExpense() / expenseBox.length;
   }
+
   // Delete Expense
   static void deleteExpense(String id) {
-    expenses.removeWhere((expense) => expense.id == id);
+    expenseBox.delete(id);
   }
+
   // Update Expense
-  static void updateExpense(Expense updatedExpense) {
-    final index = expenses.indexWhere(
-          (expense) => expense.id == updatedExpense.id,
-    );
+  static void updateExpense(Expense expense) {
+    expenseBox.put(expense.id, expense);
+  }
+  // Cash Total
+  static double getCashTotal() {
+    double total = 0;
 
-    if (index != -1) {
-      expenses[index] = updatedExpense;
+    for (var expense in expenseBox.values) {
+      if (expense.paymentMethod == "Cash") {
+        total += expense.amount;
+      }
     }
+
+    return total;
   }
 
+// UPI Total
+  static double getUpiTotal() {
+    double total = 0;
 
+    for (var expense in expenseBox.values) {
+      if (expense.paymentMethod == "UPI") {
+        total += expense.amount;
+      }
+    }
+
+    return total;
+  }
+  // Monthly Category Report
+  static Map<String, double> getMonthlyCategoryTotals() {
+    final Map<String, double> totals = {};
+    final now = DateTime.now();
+
+    for (var expense in expenseBox.values) {
+      if (expense.date.month == now.month &&
+          expense.date.year == now.year) {
+        totals[expense.category] =
+            (totals[expense.category] ?? 0) + expense.amount;
+      }
+    }
+
+    return totals;
+  }
 }
