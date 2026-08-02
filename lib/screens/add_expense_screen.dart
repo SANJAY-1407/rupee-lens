@@ -115,7 +115,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               "THIS IS MY NEW SCREEN",
               style: TextStyle(
                 fontSize: 25,
-                color: Colors.red,
+                color: Colors.green,
                 fontWeight: FontWeight.bold,
               ),
             ),

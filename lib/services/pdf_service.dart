@@ -1,200 +1,292 @@
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import 'budget_service.dart';
 import 'expense_service.dart';
-import 'package:intl/intl.dart';
+
+import 'dart:io';
+
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class PdfService {
-  static Future<void> generateExpenseReport() async {
-    final pdf = pw.Document();
+static Future<void> generateExpenseReport() async {
+final pdf = pw.Document();
 
-    final categoryTotals = ExpenseService.getCategoryTotals();
+final expenses = ExpenseService.getRecentExpenses();
+final categoryTotals = ExpenseService.getCategoryTotals();
 
-    final total = ExpenseService.getTotalExpense();
-    final cashTotal = ExpenseService.getCashTotal();
-    final upiTotal = ExpenseService.getUpiTotal();
+final total = ExpenseService.getTotalExpense();
+final cashTotal = ExpenseService.getCashTotal();
+final upiTotal = ExpenseService.getUpiTotal();
 
-    final now = DateTime.now();
-    final date = DateFormat('dd-MM-yyyy').format(now);
-    final time = DateFormat('hh:mm a').format(now);
-    pdf.addPage(
-      pw.Page(
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
+final budget = await BudgetService.getBudget();
+final remaining = budget - total;
 
-              pw.Text(
-                "RupeeLens Expense Report",
-                style: pw.TextStyle(
-                  fontSize: 24,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-              pw.Text("Generated Date : $date"),
-              pw.Text("Generated Date : $date"),
-              pw.Text("Time : $time"),
+final now = DateTime.now();
+final date = DateFormat('dd-MM-yyyy').format(now);
+final time = DateFormat('hh:mm a').format(now);
 
-              pw.SizedBox(height: 20),
+pdf.addPage(
+pw.MultiPage(
+pageFormat: PdfPageFormat.a4,
+build: (context) {
+return [
 
-              pw.Text(
-                "Payment Method",
-                style: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
+// HEADER
+pw.Center(
+child: pw.Text(
+"RupeeLens",
+style: pw.TextStyle(
+fontSize: 28,
+fontWeight: pw.FontWeight.bold,
+),
+),
+),
 
-              pw.SizedBox(height: 10),
+pw.Center(
+child: pw.Text(
+"Expense Report",
+style: pw.TextStyle(fontSize: 18),
+),
+),
 
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text("Cash"),
-                  pw.Text("₹${cashTotal.toStringAsFixed(2)}"),
-                ],
-              ),
+pw.SizedBox(height: 20),
 
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text("UPI"),
-                  pw.Text("₹${upiTotal.toStringAsFixed(2)}"),
-                ],
-              ),
+pw.Row(
+mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+children: [
+pw.Text("Generated Date : $date"),
+pw.Text("Time : $time"),
+],
+),
 
-              pw.SizedBox(height: 20),
-              pw.SizedBox(height: 20),
+pw.Divider(),
 
-              pw.Container(
-                width: double.infinity,
-                padding: const pw.EdgeInsets.all(12),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(width: 1),
-                  borderRadius: pw.BorderRadius.circular(5),
-                ),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      "TOTAL EXPENSE",
-                      style: pw.TextStyle(
-                        fontSize: 16,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.Text(
-                      "₹${total.toStringAsFixed(2)}",
-                      style: pw.TextStyle(
-                        fontSize: 16,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+pw.SizedBox(height: 15),
 
-              pw.Divider(),
-              pw.SizedBox(height: 20),
+pw.Text(
+"Summary",
+style: pw.TextStyle(
+fontSize: 18,
+fontWeight: pw.FontWeight.bold,
+),
+),
 
-              pw.Text(
-                "Category Report",
-                style: pw.TextStyle(
-                  fontSize: 18,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
+pw.SizedBox(height: 10),
 
-              pw.SizedBox(height: 10),
+pw.Container(
+padding: const pw.EdgeInsets.all(12),
+decoration: pw.BoxDecoration(
+border: pw.Border.all(),
+borderRadius: pw.BorderRadius.circular(8),
+),
+child: pw.Column(
+children: [
 
-              ...categoryTotals.entries.map(
-                    (entry) => pw.Padding(
-                  padding: const pw.EdgeInsets.only(bottom: 8),
-                  child: pw.Row(
-                    mainAxisAlignment:
-                    pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text(
-                        entry.key,
-                        style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                      pw.Text(
-                        "₹${entry.value.toStringAsFixed(2)}",
-                      ),
-                      pw.Divider(),
+_row("Total Expense", total),
 
-                      pw.SizedBox(height: 15),
+_row("Cash Expense", cashTotal),
 
-                      pw.Align(
-                        alignment: pw.Alignment.centerRight,
-                        child: pw.Text(
-                          "Category Report",
-                          style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                          pw.SizedBox(height: 10),
-                    ],
-                  ),
-                ),
-              ),
+_row("UPI Expense", upiTotal),
 
-              pw.Divider(),
-              pw.SizedBox(height: 20),
+_row("Monthly Budget", budget),
 
-              pw.Text(
-                "Category Report",
-                style: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
+_row("Remaining Budget", remaining),
 
-              pw.SizedBox(height: 10),
+],
+),
+),
 
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text(
-                    "TOTAL",
-                    style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  pw.Text(
-                    "₹${total.toStringAsFixed(2)}",
-                    style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                ],
-              ),
+pw.SizedBox(height: 20),
+// CATEGORY SUMMARY
 
-              pw.Divider(),
+pw.Text(
+"Category Summary",
+style: pw.TextStyle(
+fontSize: 18,
+fontWeight: pw.FontWeight.bold,
+),
+),
 
-              pw.SizedBox(height: 20),
+pw.SizedBox(height: 10),
 
-              pw.Text(
-                "Generated by RupeeLens",
-                style: const pw.TextStyle(
-                  color: PdfColors.grey,
-                ),
-              ),
-            ],
-          );
-        },
+pw.Table(
+border: pw.TableBorder.all(),
+children: [
+
+pw.TableRow(
+decoration: const pw.BoxDecoration(
+color: PdfColors.grey300,
+),
+children: [
+pw.Padding(
+padding: const pw.EdgeInsets.all(8),
+child: pw.Text(
+"Category",
+style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+),
+),
+pw.Padding(
+padding: const pw.EdgeInsets.all(8),
+child: pw.Text(
+"Amount",
+style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+),
+),
+],
+),
+
+...categoryTotals.entries.map(
+(entry) => pw.TableRow(
+children: [
+
+pw.Padding(
+padding: const pw.EdgeInsets.all(8),
+child: pw.Text(entry.key),
+),
+
+pw.Padding(
+padding: const pw.EdgeInsets.all(8),
+child: pw.Text(
+"₹${entry.value.toStringAsFixed(2)}",
+),
+),
+],
+),
+),
+],
+),
+
+pw.SizedBox(height: 25),
+
+pw.Text(
+"Expense Details",
+style: pw.TextStyle(
+fontSize: 18,
+fontWeight: pw.FontWeight.bold,
+),
+),
+
+pw.SizedBox(height: 10),
+
+pw.Table(
+border: pw.TableBorder.all(),
+children: [
+
+pw.TableRow(
+decoration: const pw.BoxDecoration(
+color: PdfColors.grey300,
+),
+children: [
+
+_cell("Date", true),
+_cell("Category", true),
+_cell("Payment", true),
+_cell("Amount", true),
+
+],
+),
+
+...expenses.map(
+(expense) => pw.TableRow(
+children: [
+
+_cell(
+DateFormat(
+"dd-MM-yyyy",
+).format(expense.date),
+),
+
+_cell(expense.category),
+
+_cell(expense.paymentMethod),
+
+_cell(
+"₹${expense.amount.toStringAsFixed(2)}",
+),
+
+],
+),
+),
+
+],
+),
+
+pw.SizedBox(height: 25),
+  pw.Text(
+    "🚀Generated by RupeeLens 💙",
+    style: const pw.TextStyle(
+      color: PdfColors.grey,
+    ),
+  ),
+
+];
+},
+),
+);
+
+final bytes = await pdf.save();
+
+// Save PDF
+  final directory = await getApplicationDocumentsDirectory();
+
+  final fileName =
+      "RupeeLens_Report_${DateFormat('dd_MM_yyyy_HH_mm').format(now)}.pdf";
+
+  final file = File(
+    "${directory.path}/$fileName",
+  );
+  await file.writeAsBytes(bytes);
+
+// Preview PDF
+  await Printing.layoutPdf(
+    onLayout: (format) async => bytes,
+  );
+
+// Share PDF
+  await Share.shareXFiles(
+    [XFile(file.path)],
+    text: "RupeeLens Expense Report",
+  );
+}
+
+/// SUMMARY ROW
+static pw.Widget _row(String title, double value) {
+  return pw.Padding(
+    padding: const pw.EdgeInsets.symmetric(vertical: 5),
+    child: pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Text(title),
+        pw.Text(
+          "₹${value.toStringAsFixed(2)}",
+          style: pw.TextStyle(
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// TABLE CELL
+static pw.Widget _cell(
+    String text, [
+      bool header = false,
+    ]) {
+  return pw.Padding(
+    padding: const pw.EdgeInsets.all(6),
+    child: pw.Text(
+      text,
+      style: pw.TextStyle(
+        fontWeight:
+        header ? pw.FontWeight.bold : pw.FontWeight.normal,
+        fontSize: 10,
       ),
-    );
-
-    await Printing.layoutPdf(
-      onLayout: (format) async => pdf.save(),
-    );
-  }
+    ),
+  );
+}
 }

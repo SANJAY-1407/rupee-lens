@@ -2,9 +2,29 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import '../services/expense_service.dart';
 import '../services/theme_service.dart';
+import '../services/budget_service.dart';
+import '../services/pdf_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  double monthlyBudget = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    loadBudget();
+  }
+
+  Future<void> loadBudget() async {
+    monthlyBudget = await BudgetService.getBudget();
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +37,6 @@ class ProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-
             const CircleAvatar(
               radius: 55,
               backgroundColor: Colors.green,
@@ -78,6 +97,71 @@ class ProfileScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                   ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 15),
+
+            Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.savings,
+                  color: Colors.green,
+                ),
+                title: const Text("Monthly Budget"),
+                subtitle: Text(
+                  "₹${monthlyBudget.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () async {
+                    final controller = TextEditingController(
+                      text: monthlyBudget.toStringAsFixed(0),
+                    );
+                    final dialogContext = context;
+                    final navigator = Navigator.of(context);
+                    await showDialog(
+                      context: dialogContext,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text("Set Monthly Budget"),
+                          content: TextField(
+                            controller: controller,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              hintText: "Enter Budget",
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text("Cancel"),
+                            ),
+                            ElevatedButton(
+                              onPressed: () async {
+                                final value =
+                                    double.tryParse(controller.text) ?? 0;
+
+                                await BudgetService.saveBudget(value);
+
+
+                                if (!mounted) return;
+
+                                monthlyBudget = value;
+                                setState(() {});
+
+                                navigator.pop();
+                              },
+                              child: const Text("Save"),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
             ),
@@ -145,6 +229,23 @@ class ProfileScreen extends StatelessWidget {
                 },
               ),
             ),
+            Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.picture_as_pdf,
+                  color: Colors.red,
+                ),
+                title: const Text("Export PDF Report"),
+                subtitle: const Text("Generate expense report"),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () async {
+                  await PdfService.generateExpenseReport();
+                },
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
 
             Card(
               child: ListTile(

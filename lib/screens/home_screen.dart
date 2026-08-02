@@ -8,19 +8,36 @@ import 'add_expense_screen.dart';
 import 'profile_screen.dart';
 import 'stats_screen.dart';
 import '../models/expense.dart';
+import '../services/budget_service.dart';
+import '../widgets/budget_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
+
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  double monthlyBudget = 0;
   int currentIndex = 0;
   final TextEditingController searchController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    loadBudget();
+  }
+  Future<void> loadBudget() async {
+    monthlyBudget = await BudgetService.getBudget();
 
+
+
+    setState(() {});
+  }
   String searchText = "";
+  String sortOption = "Latest";
+  String selectedFilter = "All";
   void showEditDialog(Expense expense) {
 
     final amountController =
@@ -37,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
       "Shopping",
       "Medical",
       "Entertainment",
+      "House Rent",
       "Education",
       "Bills",
       "Others",
@@ -66,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 15),
 
                     DropdownButtonFormField<String>(
-                      value: selectedCategory,
+                      initialValue: selectedCategory,
 
                       items: categories.map((category) {
                         return DropdownMenuItem(
@@ -82,12 +100,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
 
+
                     const SizedBox(height: 15),
 
                     TextField(
                       controller: descriptionController,
                       decoration: const InputDecoration(
                         labelText: "Description",
+
+
                       ),
                     ),
                   ],
@@ -121,6 +142,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     setState(() {});
 
                     Navigator.pop(context);
+
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: Colors.blue,
+                        content: Row(
+                          children: [
+                            Icon(Icons.edit, color: Colors.white),
+                            SizedBox(width: 10),
+                            Text("Expense Updated Successfully"),
+                          ],
+                        ),
+                      ),
+                    );
+
+
                   },
                   child: const Text("Save"),
                 ),
@@ -133,14 +169,91 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   @override
   Widget build(BuildContext context) {
-    final filteredExpenses = ExpenseService.getRecentExpenses().where((expense) {
+    List<Expense> recentExpenses = ExpenseService.getRecentExpenses();
+
+    final now = DateTime.now();
+
+    if (selectedFilter == "Today") {
+      recentExpenses = recentExpenses.where((e) =>
+      e.date.day == now.day &&
+          e.date.month == now.month &&
+          e.date.year == now.year).toList();
+    }
+
+    if (selectedFilter == "This Week") {
+      recentExpenses = recentExpenses.where((e) =>
+      now.difference(e.date).inDays <= 7).toList();
+    }
+
+    if (selectedFilter == "This Month") {
+      recentExpenses = recentExpenses.where((e) =>
+      e.date.month == now.month &&
+          e.date.year == now.year).toList();
+    }
+    final filteredExpenses = recentExpenses.where((expense) {
       return expense.category
           .toLowerCase()
           .contains(searchText) ||
+
           expense.description
+              .toLowerCase()
+              .contains(searchText) ||
+
+          expense.amount
+              .toString()
+              .contains(searchText) ||
+
+          expense.paymentMethod
               .toLowerCase()
               .contains(searchText);
     }).toList();
+
+    switch (sortOption) {
+      case "Latest":
+        filteredExpenses.sort((a, b) => b.date.compareTo(a.date));
+        break;
+
+      case "Oldest":
+        filteredExpenses.sort((a, b) => a.date.compareTo(b.date));
+        break;
+
+      case "Highest":
+        filteredExpenses.sort((a, b) => b.amount.compareTo(a.amount));
+        break;
+
+      case "Lowest":
+        filteredExpenses.sort((a, b) => a.amount.compareTo(b.amount));
+        break;
+
+      case "A-Z":
+        filteredExpenses.sort((a, b) => a.category.compareTo(b.category));
+        break;
+
+      case "Z-A":
+        filteredExpenses.sort((a, b) => b.category.compareTo(a.category));
+        break;
+    }
+
+    final allExpenses = ExpenseService.getExpenses();
+
+    double totalSpent = ExpenseService.getTotalExpense();
+
+    double remainingBudget = monthlyBudget - totalSpent;
+
+    String highestCategory = "No Expenses";
+
+    if (allExpenses.isNotEmpty) {
+      final Map<String, double> categoryTotals = {};
+
+      for (var expense in allExpenses) {
+        categoryTotals[expense.category] =
+            (categoryTotals[expense.category] ?? 0) + expense.amount;
+      }
+
+      highestCategory = categoryTotals.entries
+          .reduce((a, b) => a.value > b.value ? a : b)
+          .key;
+    }
     final homePage = SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -204,60 +317,282 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           const SizedBox(height: 30),
+
           TextField(
             controller: searchController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: "Search Expense...",
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.search),
+
+              suffixIcon: searchText.isNotEmpty
+                  ? IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () {
+                  searchController.clear();
+                  setState(() {
+                    searchText = "";
+                  });
+                },
+              )
+                  : null,
+
+              border: const OutlineInputBorder(),
             ),
+
             onChanged: (value) {
               setState(() {
                 searchText = value.toLowerCase();
               });
             },
           ),
+          const SizedBox(height: 20),
+          DropdownButtonFormField<String>(
+            value: sortOption,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.sort),
+              labelText: "Sort By",
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: "Latest",
+                child: Text("Latest"),
+              ),
+              DropdownMenuItem(
+                value: "Oldest",
+                child: Text("Oldest"),
+              ),
+              DropdownMenuItem(
+                value: "Highest",
+                child: Text("Highest Amount"),
+              ),
+              DropdownMenuItem(
+                value: "Lowest",
+                child: Text("Lowest Amount"),
+              ),
+              DropdownMenuItem(
+                value: "A-Z",
+                child: Text("Category A-Z"),
+              ),
+              DropdownMenuItem(
+                value: "Z-A",
+                child: Text("Category Z-A"),
+              ),
+            ],
+            onChanged: (value) {
+              setState(() {
+                sortOption = value!;
+              });
+            },
+          ),
 
           const SizedBox(height: 20),
-          const Text(
-            "Recent Expenses",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+
+          BudgetCard(
+            budget: monthlyBudget,
+            spent: ExpenseService.getTotalExpense(),
+          ),
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 20),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  const Row(
+                    children: [
+                      Icon(Icons.lightbulb, color: Colors.amber),
+                      SizedBox(width: 8),
+                      Text(
+                        "Smart Insights",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  Text("🏆 Highest Category : $highestCategory"),
+
+                  const SizedBox(height: 8),
+
+                  Text("💸 Total Spent : ₹${totalSpent.toStringAsFixed(2)}"),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    "💰 Remaining Budget : ₹${remainingBudget.toStringAsFixed(2)}",
+                    style: TextStyle(
+                      color: remainingBudget < 0 ? Colors.red : Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    "📊 Budget Used : ${monthlyBudget > 0 ? ((totalSpent / monthlyBudget) * 100).toStringAsFixed(1) : "0"}%",
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    "📦 Total Expenses : ${ExpenseService.getExpenseCount()}",
+                  ),
+
+
+
+                ],
+              ),
             ),
+          ),
+
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 20),
+
+
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 8,
+            children: [
+              "Today",
+              "This Week",
+              "This Month",
+              "All",
+            ].map((filter) {
+              return ChoiceChip(
+                label: Text(filter),
+                selected: selectedFilter == filter,
+                onSelected: (_) {
+                  setState(() {
+                    selectedFilter = filter;
+                  });
+                },
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 20),
+          const Row(
+            children: [
+              Icon(
+                Icons.receipt_long,
+                color: Colors.green,
+              ),
+              SizedBox(width: 8),
+              Text(
+                "Recent Expenses",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 15),
 
-          filteredExpenses.isEmpty
-          ? const Center(
-        child: Text(
-          "No expenses yet.",
-          style: TextStyle(fontSize: 18),
+        if (filteredExpenses.isEmpty)
+    Padding(
+      padding: const EdgeInsets.symmetric(vertical: 30),
+      child: Center(
+        child: Column(
+          children: const [
+            Icon(Icons.search_off, size: 60, color: Colors.grey),
+            SizedBox(height: 15),
+            Text(
+              "No expenses found",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 5),
+            Text(
+              "Try another filter.",
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
         ),
-      )
-          : Column(
-            children: filteredExpenses.map((expense) {
-          return RecentTile(
-            icon: Icons.currency_rupee,
-            iconColor: Colors.green,
-            title: expense.category,
-            subtitle: expense.paymentMethod == "Cash"
-                ? "${expense.description} • Cash • ${expense.denomination} notes"
-                : "${expense.description} • UPI",
-            amount: "₹${expense.amount.toStringAsFixed(2)}",
-            onEdit: () {
-              showEditDialog(expense);
-            },
-            onDelete: () {
-              setState(() {
-                ExpenseService.deleteExpense(expense.id);
-              });
-            },
-          );
-        }).toList(),
       ),
+    )
+    else
+    Column(
+    children: filteredExpenses.map((expense) {
+    return RecentTile(
+    icon: Icons.currency_rupee,
+    iconColor: Colors.green,
+    title: expense.category,
+    subtitle: expense.paymentMethod == "Cash"
+    ? "${expense.description} • Cash • ${expense.denomination} "
+        : "${expense.description} • UPI",
+    amount: "₹${expense.amount.toStringAsFixed(2)}",
+    onEdit: () {
+    showEditDialog(expense);
+    },
 
+      onDelete: () async {
+        final shouldDelete = await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text("Delete Expense"),
+              content: const Text(
+                "Are you sure you want to delete this expense?",
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context, false);
+                  },
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context, true);
+                  },
+                  child: const Text("Delete"),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (shouldDelete == true) {
+          setState(() {
+            ExpenseService.deleteExpense(expense.id);
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Colors.red,
+              content: Row(
+                children: [
+                  Icon(Icons.delete, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text("Expense Deleted Successfully"),
+                ],
+              ),
+            ),
+          );
+        }
+      },
+
+
+    );
+    }).toList(),
+    ),
         ],
       ),
     );
@@ -280,7 +615,11 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: currentIndex,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.green,
-        onTap: (index) {
+        onTap: (index) async {
+          if (index == 0) {
+            await loadBudget();
+          }
+
           setState(() {
             currentIndex = index;
           });

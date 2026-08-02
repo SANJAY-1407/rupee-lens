@@ -5,6 +5,25 @@ import '../services/pdf_service.dart';
 class StatsScreen extends StatelessWidget {
   const StatsScreen({super.key});
 
+  String getEmoji(String category) {
+    switch (category.toLowerCase()) {
+      case "food":
+        return "🍔";
+      case "shopping":
+        return "🛍";
+      case "travel":
+        return "✈️";
+      case "entertainment":
+        return "🎬";
+      case "medical":
+        return "💊";
+      case "bills":
+        return "💡";
+      default:
+        return "💰";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final categoryTotals = ExpenseService.getCategoryTotals();
@@ -126,6 +145,41 @@ class StatsScreen extends StatelessWidget {
                   Icons.category,
                   color: Colors.green,
                 ),
+                title: Text(
+                  "${getEmoji(entry.key)} ${entry.key}",
+                ), 
+                trailing: Text(
+                  "₹${entry.value.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ).toList(),
+
+          const SizedBox(height: 30),
+
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "This Month Report",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 15),
+
+          ...monthlyTotals.entries.map(
+                (entry) => Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.calendar_month,
+                  color: Colors.blue,
+                ),
                 title: Text(entry.key),
                 trailing: Text(
                   "₹${entry.value.toStringAsFixed(2)}",
@@ -135,40 +189,7 @@ class StatsScreen extends StatelessWidget {
                 ),
               ),
             ),
-    ).toList(),
-
-    const SizedBox(height: 30),
-
-    const Align(
-    alignment: Alignment.centerLeft,
-    child: Text(
-    "This Month Report",
-    style: TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.bold,
-    ),
-    ),
-    ),
-
-    const SizedBox(height: 15),
-
-    ...monthlyTotals.entries.map(
-    (entry) => Card(
-    child: ListTile(
-    leading: const Icon(
-    Icons.calendar_month,
-    color: Colors.blue,
-    ),
-    title: Text(entry.key),
-    trailing: Text(
-    "₹${entry.value.toStringAsFixed(2)}",
-    style: const TextStyle(
-    fontWeight: FontWeight.bold,
-    ),
-    ),
-    ),
-    ),
-    ),
+          ),
         ],
       ),
     );

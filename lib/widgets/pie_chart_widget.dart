@@ -8,6 +8,24 @@ class PieChartWidget extends StatelessWidget {
     super.key,
     required this.data,
   });
+  String getEmoji(String category) {
+    switch (category.toLowerCase()) {
+      case "food":
+        return "🍔";
+      case "shopping":
+        return "🛍️";
+      case "travel":
+        return "✈️";
+      case "entertainment":
+        return "🎬";
+      case "medical":
+        return "💊";
+      case "bills":
+        return "💡";
+      default:
+        return "💰";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,21 +53,23 @@ class PieChartWidget extends StatelessWidget {
     ];
 
     int colorIndex = 0;
-
+    final total = data.values.fold(0.0, (sum, item) => sum + item);
     return SizedBox(
       height: 300,
       child: PieChart(
         PieChartData(
+          centerSpaceRadius: 40,
           sections: data.entries.map((entry) {
+            final percentage = (entry.value / total) * 100;
             final section = PieChartSectionData(
               color: colors[colorIndex % colors.length],
               value: entry.value,
-              radius: 90,
+              radius: 100,
               title:
-              "${entry.key}\n₹${entry.value.toStringAsFixed(0)}",
+              "${getEmoji(entry.key)} ${entry.key}\n${percentage.toStringAsFixed(0)}%",
               titleStyle: const TextStyle(
                 color: Colors.white,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
             );
