@@ -17,7 +17,10 @@ class ExpenseService {
 
   // Recent Expenses
   static List<Expense> getRecentExpenses() {
-    return expenseBox.values.toList().reversed.toList();
+    return expenseBox.values
+        .toList()
+        .reversed
+        .toList();
   }
 
   // Total Expense
@@ -79,13 +82,12 @@ class ExpenseService {
     return totals;
   }
 
-  // Highest Expense
   static double getHighestExpense() {
-    if (expenseBox.isEmpty) return 0;
+    if (expenseBox.values.isEmpty) return 0;
 
-    double highest = expenseBox.values.first.amount;
+    double highest = 0;
 
-    for (var expense in expenseBox.values) {
+    for (final expense in expenseBox.values) {
       if (expense.amount > highest) {
         highest = expense.amount;
       }
@@ -125,6 +127,7 @@ class ExpenseService {
   static void updateExpense(Expense expense) {
     expenseBox.put(expense.id, expense);
   }
+
   // Cash Total
   static double getCashTotal() {
     double total = 0;
@@ -150,6 +153,7 @@ class ExpenseService {
 
     return total;
   }
+
   // Monthly Category Report
   static Map<String, double> getMonthlyCategoryTotals() {
     final Map<String, double> totals = {};
@@ -165,4 +169,88 @@ class ExpenseService {
 
     return totals;
   }
+
+  static String getMostUsedPaymentMethod() {
+    int cashCount = 0;
+    int upiCount = 0;
+
+    for (final expense in expenseBox.values) {
+      if (expense.paymentMethod == "Cash") {
+        cashCount++;
+      } else if (expense.paymentMethod == "UPI") {
+        upiCount++;
+      }
+    }
+
+    if (cashCount == 0 && upiCount == 0) {
+      return "No Data";
+    }
+
+    if (cashCount > upiCount) {
+      return "💵 Cash";
+    }
+
+    if (upiCount > cashCount) {
+      return "📱 UPI";
+    }
+
+    return "🤝 Equal Usage";
+  }
+
+  static String getMostSpentCategory() {
+    if (expenseBox.values.isEmpty) {
+      return "No Data";
+    }
+    final Map<String, double> totals = {};
+
+    for (final expense in expenseBox.values) {
+      totals[expense.category] =
+          (totals[expense.category] ?? 0) + expense.amount;
+    }
+
+    String topCategory = "";
+    double highestAmount = 0;
+
+    totals.forEach((category, amount) {
+      if (amount > highestAmount) {
+        highestAmount = amount;
+        topCategory = category;
+      }
+    });
+
+    return "$topCategory (₹${highestAmount.toStringAsFixed(0)})";
+  }
+
+  static int getMonthlyExpenseCount() {
+    final now = DateTime.now();
+    int count = 0;
+
+    for (final expense in expenseBox.values) {
+      if (expense.date.month == now.month &&
+          expense.date.year == now.year) {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
+  static double getAverageExpensePerDay() {
+    final now = DateTime.now();
+
+    double total = 0;
+    int today = now.day;
+
+    for (final expense in expenseBox.values) {
+      if (expense.date.month == now.month &&
+          expense.date.year == now.year) {
+        total += expense.amount;
+      }
+    }
+
+    if (today == 0) return 0;
+
+    return total / today;
+  }
+
 }

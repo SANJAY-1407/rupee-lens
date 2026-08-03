@@ -12,4 +12,34 @@ class BudgetService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getDouble(budgetKey) ?? 0;
   }
+  static String getBudgetStatus(
+      double totalExpense,
+      double monthlyBudget,
+      ) {
+    if (monthlyBudget <= 0) {
+      return "";
+    }
+
+    final percentage = (totalExpense / monthlyBudget) * 100;
+
+    if (percentage >= 100) {
+      return "🚨 Budget Exceeded!";
+    }
+
+    if (percentage >= 90) {
+      return "🔴 Critical! Budget almost finished";
+    }
+
+    if (percentage >= 75) {
+      return "🟠 Warning! You have used 75% of your budget";
+    }
+
+    if (percentage >= 50) {
+      return "🟡 Budget usage is above 50%";
+    }
+
+    return "🟢 Budget is Healthy";
+  }
+
+
 }

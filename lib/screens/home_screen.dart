@@ -18,7 +18,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 
 }
-
+final highestExpense = ExpenseService.getHighestExpense();
 class _HomeScreenState extends State<HomeScreen> {
   double monthlyBudget = 0;
   int currentIndex = 0;
@@ -238,7 +238,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
     double totalSpent = ExpenseService.getTotalExpense();
 
-    double remainingBudget = monthlyBudget - totalSpent;
+    final remainingBudget = monthlyBudget - totalSpent;
+    final budgetProgress = monthlyBudget <= 0
+        ? 0.0
+        : (totalSpent / monthlyBudget).clamp(0.0, 1.0);
+
+    final totalDays =
+        DateTime(now.year, now.month + 1, 0).day;
+
+    final dailyGoal = monthlyBudget / totalDays;
+
+    final todayExpense = ExpenseService.getTodayExpense();
+    final mostUsedPayment = ExpenseService.getMostUsedPaymentMethod();
+    final mostSpentCategory = ExpenseService.getMostSpentCategory();
+    final monthlyExpenseCount =
+    ExpenseService.getMonthlyExpenseCount();
+    final averagePerDay = ExpenseService.getAverageExpensePerDay();
+
 
     String highestCategory = "No Expenses";
 
@@ -395,12 +411,162 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 20),
+
+          Card(
+            elevation: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "📊 Monthly Budget Progress",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  LinearProgressIndicator(
+                    value: budgetProgress,
+                    minHeight: 10,
+                    borderRadius: BorderRadius.circular(10),
+                    backgroundColor: Colors.grey.shade300,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      budgetProgress >= 1
+                          ? Colors.red
+                          : budgetProgress >= 0.9
+                          ? Colors.orange
+                          : budgetProgress >= 0.75
+                          ? Colors.amber
+                          : Colors.green,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Text(
+                    "${(budgetProgress * 100).toStringAsFixed(1)}% of monthly budget used",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          Card(
+            elevation: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "🎯 Daily Spending Goal",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Text(
+                    "Daily Goal : ₹${dailyGoal.toStringAsFixed(2)}",
+                  ),
+
+                  Text(
+                    "Today's Expense : ₹${todayExpense.toStringAsFixed(2)}",
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  LinearProgressIndicator(
+                    value: dailyGoal <= 0
+                        ? 0
+                        : (todayExpense / dailyGoal).clamp(0.0, 1.0),
+                    minHeight: 8,
+                    borderRadius: BorderRadius.circular(10),
+                    backgroundColor: Colors.grey.shade300,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      todayExpense > dailyGoal
+                          ? Colors.red
+                          : Colors.green,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+
+                  const SizedBox(height: 10),
+
+                  Text(
+                    todayExpense > dailyGoal
+                        ? "🚨 Daily Limit Exceeded!"
+                        : "✅ You're within today's limit.",
+                    style: TextStyle(
+                      color: todayExpense > dailyGoal
+                          ? Colors.red
+                          : Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.payments, color: Colors.blue),
+                    title: const Text("Most Used Payment : "),
+                    subtitle: Text(mostUsedPayment),
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.local_fire_department,
+                      color: Colors.orange,
+                    ),
+                    title: const Text("Most Spent Category : "),
+                    subtitle: Text(mostSpentCategory),
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.calendar_month,
+                      color: Colors.teal,
+                    ),
+                    title: const Text("Expenses This Month : "),
+                    subtitle: Text("$monthlyExpenseCount Expenses"),
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.trending_up,
+                      color: Colors.green,
+                    ),
+                    title: const Text("Average Per Day : "),
+                    subtitle: Text("₹${averagePerDay.toStringAsFixed(2)}"),
+                  ),
+
+                  ListTile(
+                    leading: const Icon(
+                      Icons.workspace_premium,
+                      color: Colors.red,
+                    ),
+                    title: const Text("Highest Expense : "),
+                    subtitle: Text("₹${highestExpense.toStringAsFixed(2)}"),
+                  ),
 
                   const Row(
                     children: [
@@ -444,6 +610,40 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   Text(
                     "📦 Total Expenses : ${ExpenseService.getExpenseCount()}",
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+
+                      color: monthlyBudget <= 0
+                          ? Colors.grey.shade200
+                          : totalSpent >= monthlyBudget
+                          ? Colors.red.shade100
+                          : totalSpent >= monthlyBudget * 0.9
+                          ? Colors.red.shade50
+                          : totalSpent >= monthlyBudget * 0.75
+                          ? Colors.orange.shade100
+                          : totalSpent >= monthlyBudget * 0.5
+                          ? Colors.yellow.shade100
+                          : Colors.green.shade100,
+
+
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      BudgetService.getBudgetStatus(
+                        totalSpent,
+                        monthlyBudget,
+                      ),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
 
 
