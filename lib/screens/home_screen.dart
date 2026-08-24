@@ -10,6 +10,8 @@ import 'stats_screen.dart';
 import '../models/expense.dart';
 import '../services/budget_service.dart';
 import '../widgets/budget_card.dart';
+import '../services/notification_service.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,6 +32,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   Future<void> loadBudget() async {
     monthlyBudget = await BudgetService.getBudget();
+    final monthlyExpense = ExpenseService.getMonthlyExpense();
+    final exceeded = await BudgetService.isBudgetExceeded(monthlyExpense);
+
+    if (exceeded) {
+      await NotificationService.showNotification(
+        title: "⚠️ Budget Alert",
+        body: "You have exceeded your monthly budget!",
+      );
+    }
 
 
 
@@ -38,6 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String searchText = "";
   String sortOption = "Latest";
   String selectedFilter = "All";
+  DateTime? selectedDate;
+  String selectedCategory = "All";
+  String selectedPaymentMethod = "All";
   void showEditDialog(Expense expense) {
 
     final amountController =
@@ -190,6 +204,27 @@ class _HomeScreenState extends State<HomeScreen> {
       e.date.month == now.month &&
           e.date.year == now.year).toList();
     }
+    if (selectedDate != null) {
+      recentExpenses = recentExpenses.where((expense) {
+        return expense.date.day == selectedDate!.day &&
+            expense.date.month == selectedDate!.month &&
+            expense.date.year == selectedDate!.year;
+      }).toList();
+    }
+
+    if (selectedCategory != "All") {
+      recentExpenses = recentExpenses.where((expense) {
+        return expense.category == selectedCategory;
+      }).toList();
+    }
+
+    if (selectedPaymentMethod != "All") {
+      recentExpenses = recentExpenses.where((expense) {
+        return expense.paymentMethod == selectedPaymentMethod;
+      }).toList();
+    }
+
+
     final filteredExpenses = recentExpenses.where((expense) {
       return expense.category
           .toLowerCase()
@@ -236,12 +271,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final allExpenses = ExpenseService.getExpenses();
 
-    double totalSpent = ExpenseService.getTotalExpense();
+    final double monthlySpent = ExpenseService.getMonthlyExpense();
 
-    final remainingBudget = monthlyBudget - totalSpent;
+    final remainingBudget = monthlyBudget - monthlySpent;
+
     final budgetProgress = monthlyBudget <= 0
         ? 0.0
-        : (totalSpent / monthlyBudget).clamp(0.0, 1.0);
+        : (monthlySpent / monthlyBudget).clamp(0.0, 1.0);
 
     final totalDays =
         DateTime(now.year, now.month + 1, 0).day;
@@ -406,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           BudgetCard(
             budget: monthlyBudget,
-            spent: ExpenseService.getTotalExpense(),
+            spent: monthlySpent,
           ),
           const SizedBox(height: 20),
           const Divider(),
@@ -588,7 +624,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 8),
 
-                  Text("💸 Total Spent : ₹${totalSpent.toStringAsFixed(2)}"),
+                  Text(
+                    "💸 Total Spent This Month : ₹${monthlySpent.toStringAsFixed(2)}",
+                  ),
 
                   const SizedBox(height: 8),
 
@@ -603,7 +641,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 8),
 
                   Text(
-                    "📊 Budget Used : ${monthlyBudget > 0 ? ((totalSpent / monthlyBudget) * 100).toStringAsFixed(1) : "0"}%",
+                    "📊 Budget Used : ${monthlyBudget > 0
+                        ? ((monthlySpent / monthlyBudget) * 100).toStringAsFixed(1)
+                        : "0"}%",
                   ),
 
                   const SizedBox(height: 8),
@@ -621,13 +661,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       color: monthlyBudget <= 0
                           ? Colors.grey.shade200
-                          : totalSpent >= monthlyBudget
+                          : monthlySpent >= monthlyBudget
                           ? Colors.red.shade100
-                          : totalSpent >= monthlyBudget * 0.9
+                          : monthlySpent >= monthlyBudget * 0.9
                           ? Colors.red.shade50
-                          : totalSpent >= monthlyBudget * 0.75
+                          : monthlySpent >= monthlyBudget * 0.75
                           ? Colors.orange.shade100
-                          : totalSpent >= monthlyBudget * 0.5
+                          : monthlySpent >= monthlyBudget * 0.5
                           ? Colors.yellow.shade100
                           : Colors.green.shade100,
 
@@ -636,7 +676,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Text(
                       BudgetService.getBudgetStatus(
-                        totalSpent,
+                        monthlySpent,
                         monthlyBudget,
                       ),
                       style: const TextStyle(
@@ -679,7 +719,141 @@ class _HomeScreenState extends State<HomeScreen> {
             }).toList(),
           ),
 
+          const SizedBox(height: 12),
+
+          OutlinedButton.icon(
+            onPressed: () async {
+              final pickedDate = await showDatePicker(
+                context: context,
+                initialDate: selectedDate ?? DateTime.now(),
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+              );
+
+              if (pickedDate != null) {
+                setState(() {
+                  selectedDate = pickedDate;
+                  selectedFilter = "All";
+                });
+              }
+            },
+            icon: const Icon(Icons.calendar_month),
+            label: Text(
+              selectedDate == null
+                  ? "Select Date"
+                  : "${selectedDate!.day.toString().padLeft(2, '0')}-"
+                  "${selectedDate!.month.toString().padLeft(2, '0')}-"
+                  "${selectedDate!.year}",
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          DropdownButtonFormField<String>(
+            initialValue: selectedCategory,
+            decoration: const InputDecoration(
+              labelText: "Category",
+              prefixIcon: Icon(Icons.category),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: "All",
+                child: Text("All Categories"),
+              ),
+              DropdownMenuItem(
+                value: "Food",
+                child: Text("🍔 Food"),
+              ),
+              DropdownMenuItem(
+                value: "Travel",
+                child: Text("✈️ Travel"),
+              ),
+              DropdownMenuItem(
+                value: "Shopping",
+                child: Text("🛍 Shopping"),
+              ),
+              DropdownMenuItem(
+                value: "Bills",
+                child: Text("💡 Bills"),
+              ),
+              DropdownMenuItem(
+                value: "Entertainment",
+                child: Text("🎬 Entertainment"),
+              ),
+              DropdownMenuItem(
+                value: "Medical",
+                child: Text("💊 Medical"),
+              ),
+              DropdownMenuItem(
+                value: "Other",
+                child: Text("💰 Other"),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+
+              setState(() {
+                selectedCategory = value;
+              });
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+
+
+          const SizedBox(height: 10),
+
+          DropdownButtonFormField<String>(
+            initialValue: selectedPaymentMethod,
+            decoration: const InputDecoration(
+              labelText: "Payment Method",
+              prefixIcon: Icon(Icons.payment),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: "All",
+                child: Text("All Payments"),
+              ),
+              DropdownMenuItem(
+                value: "Cash",
+                child: Text("💵 Cash"),
+              ),
+              DropdownMenuItem(
+                value: "UPI",
+                child: Text("📱 UPI"),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+
+              setState(() {
+                selectedPaymentMethod = value;
+              });
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+
+
+
+          if (selectedDate != null)
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  selectedDate = null;
+                });
+              },
+              icon: const Icon(Icons.clear),
+              label: const Text("Clear Date"),
+            ),
+
           const SizedBox(height: 20),
+
+
           const Row(
             children: [
               Icon(
@@ -724,75 +898,87 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     )
     else
-    Column(
+    AnimatedSwitcher(
+    duration: const Duration(milliseconds: 350),
+    transitionBuilder: (child, animation) {
+    return FadeTransition(
+    opacity: animation,
+    child: SizeTransition(
+    sizeFactor: animation,
+    child: child,
+    ),
+    );
+    },
+    child: Column(
+    key: ValueKey(
+    filteredExpenses.map((e) => e.id).join(','),
+    ),
     children: filteredExpenses.map((expense) {
     return RecentTile(
     icon: Icons.currency_rupee,
     iconColor: Colors.green,
     title: expense.category,
-    subtitle: expense.paymentMethod == "Cash"
-    ? "${expense.description} • Cash • ${expense.denomination} "
-        : "${expense.description} • UPI",
-    amount: "₹${expense.amount.toStringAsFixed(2)}",
+    subtitle: expense.paymentMethod == 'Cash'
+    ? '${expense.description} • Cash • ${expense.denomination}'
+        : '${expense.description} • UPI',
+    amount: '₹${expense.amount.toStringAsFixed(2)}',
     onEdit: () {
     showEditDialog(expense);
     },
+    onDelete: () async {
+    final shouldDelete = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+    return AlertDialog(
+    title: const Text("Delete Expense"),
+    content: const Text(
+    "Are you sure you want to delete this expense?",
+    ),
+    actions: [
+    TextButton(
+    onPressed: () {
+    Navigator.pop(context, false);
+    },
+    child: const Text("Cancel"),
+    ),
+    ElevatedButton(
+    onPressed: () {
+    Navigator.pop(context, true);
+    },
+    child: const Text("Delete"),
+    ),
+    ],
+    );
+    },
+    );
 
-      onDelete: () async {
-        final shouldDelete = await showDialog<bool>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text("Delete Expense"),
-              content: const Text(
-                "Are you sure you want to delete this expense?",
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context, false);
-                  },
-                  child: const Text("Cancel"),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context, true);
-                  },
-                  child: const Text("Delete"),
-                ),
-              ],
-            );
-          },
-        );
+    if (shouldDelete == true) {
+    setState(() {
+    ExpenseService.deleteExpense(expense.id);
+    });
 
-        if (shouldDelete == true) {
-          setState(() {
-            ExpenseService.deleteExpense(expense.id);
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              backgroundColor: Colors.red,
-              content: Row(
-                children: [
-                  Icon(Icons.delete, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text("Expense Deleted Successfully"),
-                ],
-              ),
-            ),
-          );
-        }
-      },
-
-
+    ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+    backgroundColor: Colors.red,
+    content: Row(
+    children: [
+    Icon(
+    Icons.delete,
+    color: Colors.white,
+    ),
+    SizedBox(width: 10),
+    Text("Expense Deleted Successfully"),
+    ],
+    ),
+    ),
+    );
+    }
+    },
     );
     }).toList(),
     ),
+    ),
+
         ],
       ),
     );
@@ -809,6 +995,17 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text("RupeeLens"),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () async {
+              await NotificationService.showNotification(
+                title: "🎉 Notification Test",
+                body: "Congratulations! Notifications are working.",
+              );
+            },
+          ),
+        ],
       ),
       body: pages[currentIndex],
       bottomNavigationBar: BottomNavigationBar(

@@ -3,6 +3,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 class BudgetService {
   static const String budgetKey = "monthly_budget";
 
+
+  static Future<bool> isBudgetExceeded(double monthlyExpense) async {
+    final budget = await getBudget();
+
+    if (budget <= 0) {
+      return false;
+    }
+
+    return monthlyExpense >= budget;
+  }
+
   static Future<void> saveBudget(double budget) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(budgetKey, budget);
@@ -40,6 +51,5 @@ class BudgetService {
 
     return "🟢 Budget is Healthy";
   }
-
 
 }

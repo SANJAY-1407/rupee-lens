@@ -253,4 +253,23 @@ class ExpenseService {
     return total / today;
   }
 
+  // Weekly Expense Data
+  static List<double> getWeeklyExpenses() {
+    final List<double> weekly = List.filled(7, 0);
+
+    final now = DateTime.now();
+
+    for (final expense in expenseBox.values) {
+      final difference = now.difference(expense.date).inDays;
+
+      if (difference >= 0 && difference < 7) {
+        // Monday = 1 ... Sunday = 7
+        int index = expense.date.weekday - 1;
+        weekly[index] += expense.amount;
+      }
+    }
+
+    return weekly;
+  }
+
 }

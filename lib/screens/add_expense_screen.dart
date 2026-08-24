@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/expense.dart';
 import '../services/denomination_service.dart';
 import '../services/expense_service.dart';
+import 'qr_scanner_screen.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   final Expense? expense;
@@ -112,7 +113,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           children: [
 
             const Text(
-              "THIS IS MY NEW SCREEN",
+              "Small Savings Big Dreams🤗",
               style: TextStyle(
                 fontSize: 25,
                 color: Colors.green,
@@ -129,6 +130,29 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final scannedValue = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const QRScannerScreen(),
+                    ),
+                  );
+
+                  if (scannedValue != null && scannedValue is String) {
+                    setState(() {
+                      descriptionController.text = scannedValue;
+                    });
+                  }
+                },
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text("Scan Bill"),
+              ),
+            ),
+
+
 
             const SizedBox(height: 20),
 

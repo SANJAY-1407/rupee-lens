@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/expense_service.dart';
 import '../widgets/pie_chart_widget.dart';
 import '../services/pdf_service.dart';
+import '../widgets/weekly_bar_chart.dart';
 class StatsScreen extends StatelessWidget {
   const StatsScreen({super.key});
 
@@ -40,6 +41,31 @@ class StatsScreen extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
+
+          const SizedBox(height: 25),
+
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Weekly Expense Chart",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 15),
+
+          Card(
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: WeeklyBarChart(),
+            ),
+          ),
+
+          const SizedBox(height: 25),
 
           const SizedBox(height: 25),
           SizedBox(
@@ -121,6 +147,47 @@ class StatsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 25),
 
+          Card(
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  const Text(
+                    "📅 Weekly Summary",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  LinearProgressIndicator(
+                    value: ExpenseService.getTodayExpense() /
+                        (ExpenseService.getTotalExpense() == 0
+                            ? 1
+                            : ExpenseService.getTotalExpense()),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Text(
+                    "Today's Expense : ₹${ExpenseService.getTodayExpense().toStringAsFixed(2)}",
+                  ),
+
+                  Text(
+                    "Total Expense : ₹${ExpenseService.getTotalExpense().toStringAsFixed(2)}",
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
           const Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -159,6 +226,18 @@ class StatsScreen extends StatelessWidget {
           ).toList(),
 
           const SizedBox(height: 30),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Advanced Statistics",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 15),
 
           const Align(
             alignment: Alignment.centerLeft,
@@ -172,6 +251,80 @@ class StatsScreen extends StatelessWidget {
           ),
 
           const SizedBox(height: 15),
+          Card(
+            child: ListTile(
+              leading: const Icon(
+                Icons.calendar_month,
+                color: Colors.blue,
+              ),
+              title: const Text("Monthly Expense Count"),
+              trailing: Text(
+                ExpenseService.getMonthlyExpenseCount().toString(),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+          Card(
+            child: ListTile(
+              leading: const Icon(
+                Icons.payment,
+                color: Colors.green,
+              ),
+              title: const Text("Most Used Payment"),
+              trailing: Text(
+                ExpenseService.getMostUsedPaymentMethod(),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+
+
+          Card(
+            child: ListTile(
+              leading: const Icon(
+                Icons.star,
+                color: Colors.orange,
+              ),
+              title: const Text("Most Spent Category"),
+              trailing: Text(
+                ExpenseService.getMostSpentCategory(),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          Card(
+            child: ListTile(
+              leading: const Icon(
+                Icons.calendar_today,
+                color: Colors.purple,
+              ),
+              title: const Text("Average Per Day"),
+              trailing: Text(
+                "₹${ExpenseService.getAverageExpensePerDay().toStringAsFixed(2)}",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          const SizedBox(height: 10),
+
 
           ...monthlyTotals.entries.map(
                 (entry) => Card(

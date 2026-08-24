@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../main.dart';
 import '../services/expense_service.dart';
 import '../services/theme_service.dart';
 import '../services/budget_service.dart';
 import '../services/pdf_service.dart';
+import '../services/backup_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,16 +18,65 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   double monthlyBudget = 0;
+  String? profileImagePath;
 
   @override
   void initState() {
     super.initState();
+
     loadBudget();
+    loadProfileImage();
   }
 
   Future<void> loadBudget() async {
     monthlyBudget = await BudgetService.getBudget();
     setState(() {});
+  }
+  Future<void> loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final savedPath = prefs.getString('profile_image_path');
+
+    if (savedPath != null && savedPath.isNotEmpty) {
+      setState(() {
+        profileImagePath = savedPath;
+      });
+    }
+  }
+
+
+  Future<void> pickProfileImage() async {
+    final picker = ImagePicker();
+
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+    );
+
+    if (pickedFile == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString(
+      'profile_image_path',
+      pickedFile.path,
+    );
+
+    Future<void> loadProfileImage() async {
+      final prefs = await SharedPreferences.getInstance();
+
+      final savedPath = prefs.getString('profile_image_path');
+
+      if (savedPath != null && savedPath.isNotEmpty) {
+        setState(() {
+          profileImagePath = savedPath;
+        });
+      }
+    }
+
+
+    setState(() {
+      profileImagePath = pickedFile.path;
+    });
   }
 
   @override
@@ -37,20 +90,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            const CircleAvatar(
-              radius: 55,
-              backgroundColor: Colors.green,
-              child: Icon(
-                Icons.person,
-                size: 60,
-                color: Colors.white,
-              ),
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Colors.green,
+                  backgroundImage: profileImagePath != null
+                      ? FileImage(File(profileImagePath!))
+                      : null,
+                  child: profileImagePath == null
+                      ? const Icon(
+                    Icons.person,
+                    size: 40,
+                    color: Colors.white,
+                  )
+                      : null,
+                ),
+
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: pickProfileImage,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
 
+
+
             const SizedBox(height: 15),
+            ElevatedButton.icon(
+              onPressed: () async {
+                print("BUTTON CLICKED");
+
+                try {
+                  final file = await BackupService.exportBackup();
+
+                  print("SUCCESS");
+                  print(file.path);
+
+                  if (!context.mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Backup Saved\n${file.path}"),
+                    ),
+                  );
+                } catch (e) {
+                  print(e);
+
+                  if (!context.mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString()),
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.backup),
+              label: const Text("Backup Data"),
+            ),
 
             const Text(
-              "Sanjay M",
+              "SANJAY..",
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
@@ -232,6 +348,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Card(
               child: ListTile(
                 leading: const Icon(
+                  Icons.restore,
+                  color: Colors.blue,
+                ),
+                title: const Text("Restore Backup"),
+                subtitle: const Text("Import backup JSON file"),
+                trailing: const Icon(Icons.arrow_forward_ios),
+
+                onTap: () async {
+                  try {
+                    await BackupService.importBackup();
+
+                    if (!mounted) return;
+
+                    setState(() {});
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "✅ Backup Restored Successfully",
+                        ),
+                      ),
+                    );
+                  } catch (e) {
+                    if (!mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "Restore Failed\n$e",
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+
+            Card(
+              child: ListTile(
+                leading: const Icon(
                   Icons.picture_as_pdf,
                   color: Colors.red,
                 ),
@@ -272,7 +428,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 30),
 
             const Text(
-              "RupeeLens 💚💓",
+              "RupeeLens 💙",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
