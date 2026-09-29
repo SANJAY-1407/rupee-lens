@@ -8,7 +8,6 @@ class ExpenseService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   static String? get _userId => FirebaseAuth.instance.currentUser?.uid;
-  await ExpenseService.syncLocalToCloud();
   static CollectionReference<Map<String, dynamic>>? get _userExpensesRef {
     final uid = _userId;
     if (uid == null) return null;
