@@ -35,4 +35,30 @@ class Expense {
     required this.paymentMethod,
     required this.denomination,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'amount': amount,
+      'category': category,
+      'description': description,
+      'date': date.toIso8601String(),
+      'paymentMethod': paymentMethod,
+      'denomination': denomination,
+    };
+  }
+
+  factory Expense.fromMap(Map<String, dynamic> map, [String? docId]) {
+    return Expense(
+      id: docId ?? map['id'] ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      category: map['category'] ?? '',
+      description: map['description'] ?? '',
+      date: map['date'] != null
+          ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      paymentMethod: map['paymentMethod'] ?? '',
+      denomination: map['denomination'] ?? '',
+    );
+  }
 }

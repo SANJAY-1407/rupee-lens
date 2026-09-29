@@ -7,6 +7,8 @@ import '../services/theme_service.dart';
 import '../services/budget_service.dart';
 import '../services/pdf_service.dart';
 import '../services/backup_service.dart';
+import '../services/auth_service.dart';
+import '../login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -30,20 +32,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> loadBudget() async {
     monthlyBudget = await BudgetService.getBudget();
-    setState(() {});
+    if (mounted) setState(() {});
   }
+
   Future<void> loadProfileImage() async {
     final prefs = await SharedPreferences.getInstance();
 
     final savedPath = prefs.getString('profile_image_path');
 
     if (savedPath != null && savedPath.isNotEmpty) {
-      setState(() {
-        profileImagePath = savedPath;
-      });
+      if (mounted) {
+        setState(() {
+          profileImagePath = savedPath;
+        });
+      }
     }
   }
-
 
   Future<void> pickProfileImage() async {
     final picker = ImagePicker();
@@ -61,30 +65,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
       pickedFile.path,
     );
 
-    Future<void> loadProfileImage() async {
-      final prefs = await SharedPreferences.getInstance();
-
-      final savedPath = prefs.getString('profile_image_path');
-
-      if (savedPath != null && savedPath.isNotEmpty) {
-        setState(() {
-          profileImagePath = savedPath;
-        });
-      }
+    if (mounted) {
+      setState(() {
+        profileImagePath = pickedFile.path;
+      });
     }
-
-
-    setState(() {
-      profileImagePath = pickedFile.path;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService.currentUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Profile"),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.red),
+            tooltip: "Logout",
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Logout"),
+                  content: const Text("Are you sure you want to log out?"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text("Cancel"),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text("Logout"),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await AuthService.signOut();
+                if (!context.mounted) return;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -100,10 +134,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       : null,
                   child: profileImagePath == null
                       ? const Icon(
-                    Icons.person,
-                    size: 40,
-                    color: Colors.white,
-                  )
+                          Icons.person,
+                          size: 40,
+                          color: Colors.white,
+                        )
                       : null,
                 ),
 
@@ -129,18 +163,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
 
-
-
             const SizedBox(height: 15),
+
+            Text(
+              user?.email ?? "RupeeLens User",
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 5),
+
+            const Text(
+              "Flutter Developer",
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
             ElevatedButton.icon(
               onPressed: () async {
-                print("BUTTON CLICKED");
-
                 try {
                   final file = await BackupService.exportBackup();
-
-                  print("SUCCESS");
-                  print(file.path);
 
                   if (!context.mounted) return;
 
@@ -150,8 +198,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   );
                 } catch (e) {
-                  print(e);
-
                   if (!context.mounted) return;
 
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -165,25 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               label: const Text("Backup Data"),
             ),
 
-            const Text(
-              "SANJAY..",
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 5),
-
-            const Text(
-              "Flutter Developer",
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 16,
-              ),
-            ),
-
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
             Card(
               child: ListTile(
@@ -263,7 +291,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                                 await BudgetService.saveBudget(value);
 
-
                                 if (!mounted) return;
 
                                 monthlyBudget = value;
@@ -284,7 +311,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 30),
 
-            const Divider(),const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 20),
 
             const Align(
               alignment: Alignment.centerLeft,
@@ -309,7 +337,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     value: mode == ThemeMode.dark,
                     onChanged: (value) async {
                       RupeeLensAppState.themeNotifier.value =
-                      value ? ThemeMode.dark : ThemeMode.light;
+                          value ? ThemeMode.dark : ThemeMode.light;
 
                       await ThemeService.saveTheme(value);
                     },
@@ -318,7 +346,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            Card(
+            const Card(
               child: ListTile(
                 leading: Icon(Icons.notifications),
                 title: Text("Notifications"),
@@ -354,7 +382,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: const Text("Restore Backup"),
                 subtitle: const Text("Import backup JSON file"),
                 trailing: const Icon(Icons.arrow_forward_ios),
-
                 onTap: () async {
                   try {
                     await BackupService.importBackup();
@@ -402,8 +429,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 10),
 
-
-            Card(
+            const Card(
               child: ListTile(
                 leading: Icon(Icons.star),
                 title: Text("Rate App"),
@@ -423,6 +449,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
               leading: Icon(Icons.code, color: Colors.purple),
               title: Text("Developed By"),
               trailing: Text("Sanjay M"),
+            ),
+
+            const SizedBox(height: 20),
+
+            // LOGOUT BUTTON IN PROFILE
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.logout),
+                label: const Text(
+                  "LOGOUT",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Logout"),
+                      content: const Text("Are you sure you want to log out?"),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text("Logout"),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    await AuthService.signOut();
+                    if (!context.mounted) return;
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
+                },
+              ),
             ),
 
             const SizedBox(height: 30),

@@ -1,21 +1,80 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive/hive.dart';
 import '../models/expense.dart';
 
 class ExpenseService {
-  static final Box<Expense> expenseBox =
-  Hive.box<Expense>('expenses');
+  static final Box<Expense> expenseBox = Hive.box<Expense>('expenses');
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Add Expense
-  static void addExpense(Expense expense) {
-    expenseBox.put(expense.id, expense);
+  static String? get _userId => FirebaseAuth.instance.currentUser?.uid;
+  await ExpenseService.syncLocalToCloud();
+  static CollectionReference<Map<String, dynamic>>? get _userExpensesRef {
+    final uid = _userId;
+    if (uid == null) return null;
+    return _firestore.collection('users').doc(uid).collection('expenses');
   }
 
-  // Get All Expenses
+  static void initFirestoreListener() {
+    final ref = _userExpensesRef;
+    if (ref == null) return;
+
+    ref.snapshots().listen((snapshot) {
+      for (var doc in snapshot.docs) {
+        final expense = Expense.fromMap(doc.data(), doc.id);
+        expenseBox.put(expense.id, expense);
+      }
+    });
+  }
+
+  static Future<void> addExpense(Expense expense) async {
+    await expenseBox.put(expense.id, expense);
+    final ref = _userExpensesRef;
+    if (ref != null) {
+      await ref.doc(expense.id).set(expense.toMap());
+    }
+  }
+
+  static Future<void> updateExpense(Expense expense) async {
+    await expenseBox.put(expense.id, expense);
+    final ref = _userExpensesRef;
+    if (ref != null) {
+      await ref.doc(expense.id).update(expense.toMap());
+    }
+  }
+
+  static Future<void> deleteExpense(String id) async {
+    await expenseBox.delete(id);
+    final ref = _userExpensesRef;
+    if (ref != null) {
+      await ref.doc(id).delete();
+    }
+  }
+
+  static Future<void> syncLocalToCloud() async {
+    final ref = _userExpensesRef;
+    if (ref == null) return;
+
+    for (var expense in expenseBox.values) {
+      await ref.doc(expense.id).set(expense.toMap(), SetOptions(merge: true));
+    }
+  }
+
+  static Future<void> fetchFromCloud() async {
+    final ref = _userExpensesRef;
+    if (ref == null) return;
+
+    final snapshot = await ref.get();
+    for (var doc in snapshot.docs) {
+      final expense = Expense.fromMap(doc.data(), doc.id);
+      expenseBox.put(expense.id, expense);
+    }
+  }
+
   static List<Expense> getExpenses() {
     return expenseBox.values.toList();
   }
 
-  // Recent Expenses
   static List<Expense> getRecentExpenses() {
     return expenseBox.values
         .toList()
@@ -23,18 +82,14 @@ class ExpenseService {
         .toList();
   }
 
-  // Total Expense
   static double getTotalExpense() {
     double total = 0;
-
     for (var expense in expenseBox.values) {
       total += expense.amount;
     }
-
     return total;
   }
 
-  // Today's Expense
   static double getTodayExpense() {
     double total = 0;
     final today = DateTime.now();
@@ -46,11 +101,9 @@ class ExpenseService {
         total += expense.amount;
       }
     }
-
     return total;
   }
 
-  // Monthly Expense
   static double getMonthlyExpense() {
     double total = 0;
     final today = DateTime.now();
@@ -61,16 +114,13 @@ class ExpenseService {
         total += expense.amount;
       }
     }
-
     return total;
   }
 
-  // Expense Count
   static int getExpenseCount() {
     return expenseBox.length;
   }
 
-  // Category Totals
   static Map<String, double> getCategoryTotals() {
     Map<String, double> totals = {};
 
@@ -78,7 +128,6 @@ class ExpenseService {
       totals[expense.category] =
           (totals[expense.category] ?? 0) + expense.amount;
     }
-
     return totals;
   }
 
@@ -96,7 +145,6 @@ class ExpenseService {
     return highest;
   }
 
-  // Lowest Expense
   static double getLowestExpense() {
     if (expenseBox.isEmpty) return 0;
 
@@ -111,24 +159,12 @@ class ExpenseService {
     return lowest;
   }
 
-  // Average Expense
   static double getAverageExpense() {
     if (expenseBox.isEmpty) return 0;
 
     return getTotalExpense() / expenseBox.length;
   }
 
-  // Delete Expense
-  static void deleteExpense(String id) {
-    expenseBox.delete(id);
-  }
-
-  // Update Expense
-  static void updateExpense(Expense expense) {
-    expenseBox.put(expense.id, expense);
-  }
-
-  // Cash Total
   static double getCashTotal() {
     double total = 0;
 
@@ -141,7 +177,6 @@ class ExpenseService {
     return total;
   }
 
-// UPI Total
   static double getUpiTotal() {
     double total = 0;
 
@@ -154,7 +189,6 @@ class ExpenseService {
     return total;
   }
 
-  // Monthly Category Report
   static Map<String, double> getMonthlyCategoryTotals() {
     final Map<String, double> totals = {};
     final now = DateTime.now();
@@ -253,7 +287,6 @@ class ExpenseService {
     return total / today;
   }
 
-  // Weekly Expense Data
   static List<double> getWeeklyExpenses() {
     final List<double> weekly = List.filled(7, 0);
 
@@ -263,7 +296,6 @@ class ExpenseService {
       final difference = now.difference(expense.date).inDays;
 
       if (difference >= 0 && difference < 7) {
-        // Monday = 1 ... Sunday = 7
         int index = expense.date.weekday - 1;
         weekly[index] += expense.amount;
       }
@@ -271,5 +303,4 @@ class ExpenseService {
 
     return weekly;
   }
-
 }
