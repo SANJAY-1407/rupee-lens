@@ -151,7 +151,7 @@ child: pw.Text(entry.key),
 pw.Padding(
 padding: const pw.EdgeInsets.all(8),
 child: pw.Text(
-"₹${entry.value.toStringAsFixed(2)}",
+entry.value.toStringAsFixed(2),
 ),
 ),
 ],
@@ -205,7 +205,7 @@ _cell(expense.category),
 _cell(expense.paymentMethod),
 
 _cell(
-"₹${expense.amount.toStringAsFixed(2)}",
+expense.amount.toStringAsFixed(2),
 ),
 
 ],
@@ -262,7 +262,7 @@ static pw.Widget _row(String title, double value) {
       children: [
         pw.Text(title),
         pw.Text(
-          "₹${value.toStringAsFixed(2)}",
+          value.toStringAsFixed(2),
           style: pw.TextStyle(
             fontWeight: pw.FontWeight.bold,
           ),

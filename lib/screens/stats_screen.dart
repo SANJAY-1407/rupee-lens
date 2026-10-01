@@ -205,25 +205,6 @@ class StatsScreen extends StatelessWidget {
             data: categoryTotals,
           ),
 
-          ...categoryTotals.entries.map(
-                (entry) => Card(
-              child: ListTile(
-                leading: const Icon(
-                  Icons.category,
-                  color: Colors.green,
-                ),
-                title: Text(
-                  "${getEmoji(entry.key)} ${entry.key}",
-                ), 
-                trailing: Text(
-                  "₹${entry.value.toStringAsFixed(2)}",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ).toList(),
 
           const SizedBox(height: 30),
           const Align(

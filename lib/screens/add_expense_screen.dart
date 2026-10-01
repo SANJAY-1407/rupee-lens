@@ -141,9 +141,29 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     ),
                   );
 
-                  if (scannedValue != null && scannedValue is String) {
+                  if (scannedValue != null && scannedValue is Map) {
                     setState(() {
-                      descriptionController.text = scannedValue;
+                      if (scannedValue['type'] == 'upi') {
+                        final String? amount = scannedValue['amount'];
+                        final String? merchantName = scannedValue['merchantName'];
+
+                        selectedPaymentMethod = "UPI";
+
+
+                        if (amount != null && amount.isNotEmpty) {
+                          amountController.text = amount;
+                        }
+
+                        if (merchantName != null && merchantName.isNotEmpty) {
+                          descriptionController.text = merchantName;
+                        }
+                      } else {
+                        final String? rawValue = scannedValue['rawValue'];
+
+                        if (rawValue != null && rawValue.isNotEmpty) {
+                          descriptionController.text = rawValue;
+                        }
+                      }
                     });
                   }
                 },

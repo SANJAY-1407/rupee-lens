@@ -10,6 +10,7 @@ import '../services/backup_service.dart';
 import '../services/auth_service.dart';
 import '../login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,9 +19,18 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   double monthlyBudget = 0;
   String? profileImagePath;
+
+  bool dailyReminderEnabled = false;
+
+  int reminderHour = 20;
+  int reminderMinute = 0;
+
+  late AnimationController _reminderAnimationController;
+  late Animation<double> _reminderScaleAnimation;
 
   @override
   void initState() {
@@ -28,7 +38,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     loadBudget();
     loadProfileImage();
+
+    _reminderAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+
+    _reminderScaleAnimation = Tween<double>(
+      begin: 0.96,
+      end: 1.04,
+    ).animate(
+      CurvedAnimation(
+        parent: _reminderAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _reminderAnimationController.repeat(
+      reverse: true,
+    );
+
+    loadReminderSettings();
   }
+
+  @override
+  void dispose() {
+    _reminderAnimationController.dispose();
+    super.dispose();
+  }
+
 
   Future<void> loadBudget() async {
     monthlyBudget = await BudgetService.getBudget();
@@ -48,6 +86,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     }
   }
+  Future<void> loadReminderSettings() async {
+    final enabled = await NotificationService.isReminderEnabled();
+    final time = await NotificationService.getReminderTime();
+
+    if (!mounted) return;
+
+    setState(() {
+      dailyReminderEnabled = enabled;
+      reminderHour = time.hour;
+      reminderMinute = time.minute;
+    });
+  }
+  String _formatReminderTime() {
+    final hour = reminderHour % 12 == 0
+        ? 12
+        : reminderHour % 12;
+
+    final minute = reminderMinute
+        .toString()
+        .padLeft(2, '0');
+
+    final period = reminderHour >= 12
+        ? "PM"
+        : "AM";
+
+    return "$hour:$minute $period";
+  }
+
+  Future<void> _selectReminderTime() async {
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: reminderHour,
+        minute: reminderMinute,
+      ),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            alwaysUse24HourFormat: false,
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedTime == null) return;
+
+    await NotificationService.saveReminderTime(
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    await NotificationService.scheduleDailyReminder();
+
+    if (!mounted) return;
+
+    setState(() {
+      reminderHour = pickedTime.hour;
+      reminderMinute = pickedTime.minute;
+    });
+  }
+
 
   Future<void> pickProfileImage() async {
     final picker = ImagePicker();
@@ -345,13 +445,238 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
               ),
             ),
+            AnimatedBuilder(
+              animation: _reminderAnimationController,
+              builder: (context, child) {
+                final isDark =
+                    Theme.of(context).brightness == Brightness.dark;
 
-            const Card(
-              child: ListTile(
-                leading: Icon(Icons.notifications),
-                title: Text("Notifications"),
-                trailing: Icon(Icons.arrow_forward_ios, size: 18),
-              ),
+                final primaryColor = Theme.of(context).colorScheme.primary;
+
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isDark
+                          ? [
+                        primaryColor.withValues(alpha: 0.18),
+                        Colors.white.withValues(alpha: 0.04),
+                      ]
+                          : [
+                        primaryColor.withValues(alpha: 0.10),
+                        Colors.white,
+                      ],
+                    ),
+                    border: Border.all(
+                      color: dailyReminderEnabled
+                          ? primaryColor.withValues(alpha: 0.25)
+                          : Colors.grey.withValues(alpha: 0.15),
+                    ),
+                    boxShadow: dailyReminderEnabled
+                        ? [
+                      BoxShadow(
+                        color: primaryColor.withValues(alpha: 0.12),
+                        blurRadius: 24,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                        : [],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Transform.scale(
+                            scale: dailyReminderEnabled
+                                ? _reminderScaleAnimation.value
+                                : 1,
+                            child: Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: primaryColor.withValues(alpha: 0.12),
+                              ),
+                              child: Icon(
+                                dailyReminderEnabled
+                                    ? Icons.notifications_active_rounded
+                                    : Icons.notifications_none_rounded,
+                                color: dailyReminderEnabled
+                                    ? primaryColor
+                                    : Colors.grey,
+                                size: 27,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(width: 14),
+
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Daily Expense Reminder",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 5),
+
+                                Text(
+                                  dailyReminderEnabled
+                                      ? "We'll remind you if you haven't logged an expense."
+                                      : "Get a gentle reminder to track today's spending.",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    height: 1.35,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          Switch.adaptive(
+                            value: dailyReminderEnabled,
+                            activeColor: primaryColor,
+                            onChanged: (value) async {
+                              setState(() {
+                                dailyReminderEnabled = value;
+                              });
+
+                              await NotificationService.setReminderEnabled(
+                                value,
+                              );
+
+                              if (value) {
+                                await NotificationService.scheduleDailyReminder();
+                              } else {
+                                await NotificationService.cancelDailyReminder();
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeInOut,
+                        child: dailyReminderEnabled
+                            ? Column(
+                          children: [
+                            const SizedBox(height: 18),
+
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                color: isDark
+                                    ? Colors.black.withValues(alpha: 0.16)
+                                    : Colors.white.withValues(alpha: 0.65),
+                                border: Border.all(
+                                  color: primaryColor.withValues(alpha: 0.10),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 42,
+                                    height: 42,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(13),
+                                      color: primaryColor.withValues(alpha: 0.10),
+                                    ),
+                                    child: Icon(
+                                      Icons.access_time_rounded,
+                                      color: primaryColor,
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 12),
+
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Reminder Time",
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 3),
+
+                                        Text(
+                                          _formatReminderTime(),
+                                          style: const TextStyle(
+                                            fontSize: 19,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  TextButton(
+                                    onPressed: _selectReminderTime,
+                                    child: const Text(
+                                      "CHANGE",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome_rounded,
+                                  size: 16,
+                                  color: primaryColor,
+                                ),
+
+                                const SizedBox(width: 7),
+
+                                Expanded(
+                                  child: Text(
+                                    "Only reminds you when today's expense hasn't been logged.",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
 
             Card(

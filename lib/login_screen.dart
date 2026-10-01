@@ -357,7 +357,7 @@ class _LoginContent extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            'Welcome back💓',
+            'Welcome back 💙',
             style: textTheme.titleLarge?.copyWith(
               color: colors.onSurface,
               fontWeight: FontWeight.w800,
