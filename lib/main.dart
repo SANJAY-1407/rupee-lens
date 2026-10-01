@@ -13,6 +13,7 @@ import 'services/expense_service.dart';
 import 'screens/home_screen.dart';
 import 'services/notification_service.dart';
 import 'login_screen.dart';
+import 'splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -106,29 +107,31 @@ class RupeeLensAppState extends State<RupeeLensApp> {
           themeMode: currentMode,
 
           // FIREBASE AUTH PERSISTENCE
-          home: StreamBuilder<User?>(
-            stream: AuthService.authStateChanges,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
+          home: SplashScreen(
+            child: StreamBuilder<User?>(
+              stream: AuthService.authStateChanges,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Scaffold(
+                    body: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
 
-              if (snapshot.hasData && snapshot.data != null) {
-                final user = snapshot.data!;
+                if (snapshot.hasData && snapshot.data != null) {
+                  final user = snapshot.data!;
 
-                initializeCloudSync(user.uid);
+                  initializeCloudSync(user.uid);
 
-                return const HomeScreen();
-              }
+                  return const HomeScreen();
+                }
 
-              syncedUserId = null;
+                syncedUserId = null;
 
-              return const LoginScreen();
-            },
+                return const LoginScreen();
+              },
+            ),
           ),
         );
       },

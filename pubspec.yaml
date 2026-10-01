@@ -37,6 +37,7 @@ dependencies:
   firebase_core: ^3.12.1
   firebase_auth: ^5.5.1
   cloud_firestore: ^5.6.5
+  lottie: ^3.3.1
 
 flutter:
   uses-material-design: true
@@ -44,6 +45,7 @@ flutter:
 
   assets:
     - assets/images/rupeelens_logo.png
+    - assets/animations/rupee_animation.json
 
 dev_dependencies:
   flutter_test:
@@ -66,6 +68,6 @@ flutter_native_splash:
     web: false
 
 flutter_launcher_icons:
-      android: true
-      ios: true
-      image_path: "assets/images/rupeelens_logo.png"
+  android: true
+  ios: true
+  image_path: "assets/images/rupeelens_logo.png"

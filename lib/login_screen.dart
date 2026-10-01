@@ -205,11 +205,11 @@ class _LoginScreenState extends State<LoginScreen>
                 final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
                 return SingleChildScrollView(
                   keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.fromLTRB(20, 24, 20, keyboardInset + 24),
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(20, 20, 20, keyboardInset + 24),
                   child: ConstrainedBox(
                     constraints:
-                    BoxConstraints(minHeight: constraints.maxHeight - 48),
+                        BoxConstraints(minHeight: constraints.maxHeight - 40),
                     child: Center(
                       child: FadeTransition(
                         opacity: CurvedAnimation(
@@ -230,11 +230,11 @@ class _LoginScreenState extends State<LoginScreen>
                               borderRadius: BorderRadius.circular(32),
                               child: BackdropFilter(
                                 filter:
-                                ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                                    ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
                                     color: colors.surface.withOpacity(
-                                      isDark ? 0.84 : 0.90,
+                                      isDark ? 0.86 : 0.92,
                                     ),
                                     borderRadius: BorderRadius.circular(32),
                                     border: Border.all(
@@ -245,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.black.withOpacity(
-                                          isDark ? 0.30 : 0.12,
+                                          isDark ? 0.32 : 0.12,
                                         ),
                                         blurRadius: 32,
                                         offset: const Offset(0, 16),
@@ -257,6 +257,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     child: _LoginContent(
                                       colors: colors,
                                       isDark: isDark,
+                                      entranceAnimation: _entranceController,
                                       emailController: emailController,
                                       passwordController: passwordController,
                                       obscurePassword: obscurePassword,
@@ -293,6 +294,7 @@ class _LoginContent extends StatelessWidget {
   const _LoginContent({
     required this.colors,
     required this.isDark,
+    required this.entranceAnimation,
     required this.emailController,
     required this.passwordController,
     required this.obscurePassword,
@@ -305,6 +307,7 @@ class _LoginContent extends StatelessWidget {
 
   final ColorScheme colors;
   final bool isDark;
+  final Animation<double> entranceAnimation;
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final bool obscurePassword;
@@ -324,36 +327,16 @@ class _LoginContent extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 1. HERO RUPEELENS BRANDING IMAGE WITH FADE + SCALE ANIMATION
           Center(
-            child: Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: colors.primaryContainer,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.primary.withOpacity(0.22),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: Image.asset(
-                  'assets/images/rupeelens_logo.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
-                    Icons.account_balance_wallet_rounded,
-                    color: colors.onPrimaryContainer,
-                    size: 34,
-                  ),
-                ),
-              ),
+            child: _RupeeLensBrandingHero(
+              isDark: isDark,
+              animation: entranceAnimation,
             ),
           ),
           const SizedBox(height: 18),
+
+          // 2. WELCOME / LOGIN TITLE
           Text(
             'RupeeLens',
             textAlign: TextAlign.center,
@@ -363,37 +346,44 @@ class _LoginContent extends StatelessWidget {
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             'Track every rupee. Spend wisely.',
             textAlign: TextAlign.center,
-            style:
-            textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'Welcome back',
-            style: textTheme.headlineSmall?.copyWith(
-              color: colors.onSurface,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.4,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 24),
+          Text(
+            'Welcome back💓',
+            style: textTheme.titleLarge?.copyWith(
+              color: colors.onSurface,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 4),
           Text(
             'Sign in to continue managing your expenses.',
-            style:
-            textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+
+          // 3. EMAIL FIELD
           TextField(
             controller: emailController,
             enabled: !isLoading,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.username, AutofillHints.email],
-            style:
-            TextStyle(color: colors.onSurface, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: colors.onSurface,
+              fontWeight: FontWeight.w500,
+            ),
             decoration: _fieldDecoration(
               colors: colors,
               fillColor: fieldFill,
@@ -403,6 +393,8 @@ class _LoginContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+
+          // 4. PASSWORD FIELD
           TextField(
             controller: passwordController,
             enabled: !isLoading,
@@ -410,8 +402,10 @@ class _LoginContent extends StatelessWidget {
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => isLoading ? null : onLogin(),
             autofillHints: const [AutofillHints.password],
-            style:
-            TextStyle(color: colors.onSurface, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: colors.onSurface,
+              fontWeight: FontWeight.w500,
+            ),
             decoration: _fieldDecoration(
               colors: colors,
               fillColor: fieldFill,
@@ -430,14 +424,24 @@ class _LoginContent extends StatelessWidget {
               ),
             ),
           ),
+
+          // FORGOT PASSWORD
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: isLoading ? null : onForgotPassword,
-              child: const Text('Forgot password?'),
+              child: Text(
+                'Forgot password?',
+                style: TextStyle(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 8),
+
+          // 5. LOGIN BUTTON
           SizedBox(
             height: 54,
             child: ElevatedButton(
@@ -454,27 +458,35 @@ class _LoginContent extends StatelessWidget {
                 duration: const Duration(milliseconds: 180),
                 child: isLoading
                     ? SizedBox(
-                  key: const ValueKey('loading'),
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.4,
-                    color: colors.onPrimary,
-                  ),
-                )
+                        key: const ValueKey('loading'),
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          color: colors.onPrimary,
+                        ),
+                      )
                     : const Row(
-                  key: ValueKey('login'),
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Log in'),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward_rounded, size: 18),
-                  ],
-                ),
+                        key: ValueKey('login'),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Log in',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(Icons.arrow_forward_rounded, size: 18),
+                        ],
+                      ),
               ),
             ),
           ),
           const SizedBox(height: 24),
+
+          // DIVIDER
           Row(
             children: [
               Expanded(child: Divider(color: colors.outlineVariant)),
@@ -493,13 +505,21 @@ class _LoginContent extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+
+          // 6. CREATE ACCOUNT / SIGN UP
           TextButton(
             onPressed: isLoading ? null : onSignUp,
             style: TextButton.styleFrom(
               foregroundColor: colors.primary,
               minimumSize: const Size.fromHeight(48),
             ),
-            child: const Text('Create an account'),
+            child: const Text(
+              'Create an account',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -528,6 +548,81 @@ class _LoginContent extends StatelessWidget {
       enabledBorder: border,
       focusedBorder: border.copyWith(
         borderSide: BorderSide(color: colors.primary, width: 1.8),
+      ),
+    );
+  }
+}
+
+/// Prominently displays the exact RupeeLens gold/black branding image in a
+/// premium container with scale + fade entrance animation.
+class _RupeeLensBrandingHero extends StatelessWidget {
+  const _RupeeLensBrandingHero({
+    required this.isDark,
+    required this.animation,
+  });
+
+  final bool isDark;
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: Tween<double>(begin: 0.88, end: 1.0).animate(
+        CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+        ),
+      ),
+      child: FadeTransition(
+        opacity: CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOut,
+        ),
+        child: Container(
+          constraints: const BoxConstraints(
+            maxHeight: 160,
+            maxWidth: 240,
+          ),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0D0D0D),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: const Color(0xFFFFD700).withOpacity(0.38),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFFD700).withOpacity(isDark ? 0.22 : 0.14),
+                blurRadius: 24,
+                spreadRadius: 2,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Image.asset(
+            'assets/images/rupeelens_logo.png',
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: Color(0xFFFFD700),
+                  size: 48,
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'RupeeLens',
+                  style: TextStyle(
+                    color: Color(0xFFFFD700),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
