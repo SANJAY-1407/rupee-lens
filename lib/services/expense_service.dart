@@ -1,29 +1,99 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive/hive.dart';
 import '../models/expense.dart';
 
 class ExpenseService {
-  static final Box<Expense> expenseBox = Hive.box<Expense>('expenses');
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final Box<Expense> expenseBox =
+  Hive.box<Expense>('expenses');
 
-  static String? get _userId => FirebaseAuth.instance.currentUser?.uid;
-  static CollectionReference<Map<String, dynamic>>? get _userExpensesRef {
+  static final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance;
+
+  static StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+  _firestoreSubscription;
+
+  static String? _activeUserId;
+
+  static String? get _userId =>
+      FirebaseAuth.instance.currentUser?.uid;
+
+  static CollectionReference<Map<String, dynamic>>?
+  get _userExpensesRef {
     final uid = _userId;
+
     if (uid == null) return null;
-    return _firestore.collection('users').doc(uid).collection('expenses');
+
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('expenses');
+  }
+
+  static Future<void> switchUser() async {
+    final uid = _userId;
+
+    // No user logged in
+    if (uid == null) {
+      await clearLocalExpenses();
+      await stopFirestoreListener();
+      _activeUserId = null;
+      return;
+    }
+
+    // Same user already loaded
+    if (_activeUserId == uid) {
+      return;
+    }
+
+    // Stop previous user's listener
+    await stopFirestoreListener();
+
+    // Remove previous user's local expenses
+    await clearLocalExpenses();
+
+    // Mark this user as active
+    _activeUserId = uid;
+
+    // Load only this user's Firestore expenses
+    await fetchFromCloud();
+
+    // Listen only to this user's Firestore collection
+    initFirestoreListener();
+  }
+
+  static Future<void> clearLocalExpenses() async {
+    await expenseBox.clear();
+  }
+
+  static Future<void> stopFirestoreListener() async {
+    await _firestoreSubscription?.cancel();
+    _firestoreSubscription = null;
   }
 
   static void initFirestoreListener() {
     final ref = _userExpensesRef;
+
     if (ref == null) return;
 
-    ref.snapshots().listen((snapshot) {
-      for (var doc in snapshot.docs) {
-        final expense = Expense.fromMap(doc.data(), doc.id);
-        expenseBox.put(expense.id, expense);
-      }
-    });
+    _firestoreSubscription?.cancel();
+
+    _firestoreSubscription = ref.snapshots().listen(
+          (snapshot) {
+        for (final doc in snapshot.docs) {
+          final expense = Expense.fromMap(
+            doc.data(),
+            doc.id,
+          );
+
+          expenseBox.put(
+            expense.id,
+            expense,
+          );
+        }
+      },
+    );
   }
 
   static Future<void> addExpense(Expense expense) async {
@@ -61,12 +131,21 @@ class ExpenseService {
 
   static Future<void> fetchFromCloud() async {
     final ref = _userExpensesRef;
+
     if (ref == null) return;
 
     final snapshot = await ref.get();
-    for (var doc in snapshot.docs) {
-      final expense = Expense.fromMap(doc.data(), doc.id);
-      expenseBox.put(expense.id, expense);
+
+    for (final doc in snapshot.docs) {
+      final expense = Expense.fromMap(
+        doc.data(),
+        doc.id,
+      );
+
+      await expenseBox.put(
+        expense.id,
+        expense,
+      );
     }
   }
 
@@ -302,4 +381,11 @@ class ExpenseService {
 
     return weekly;
   }
+  static Future<void> clearUserSession() async {
+    await stopFirestoreListener();
+    await clearLocalExpenses();
+
+    _activeUserId = null;
+  }
+
 }
